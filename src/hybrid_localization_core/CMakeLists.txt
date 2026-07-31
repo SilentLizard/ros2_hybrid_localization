@@ -28,6 +28,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/particle_gmm_comparison.cpp
   src/particle_statistics.cpp
   src/recovery_sampling.cpp
+  src/transition_supervisor.cpp
 )
 # END AUTO SOURCES
 
@@ -177,6 +178,13 @@ if(BUILD_TESTING)
     test/test_recovery_sampling.cpp
   )
   target_link_libraries(test_recovery_sampling
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_transition_supervisor
+    test/test_transition_supervisor.cpp
+  )
+  target_link_libraries(test_transition_supervisor
     ${PROJECT_NAME}
   )
   # END AUTO TESTS
