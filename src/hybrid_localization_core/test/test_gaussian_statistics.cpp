@@ -1,5 +1,7 @@
 #include <numbers>
 #include <vector>
+#include <cstddef>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
@@ -197,4 +199,64 @@ TEST(GaussianStatistics, ComputesWeightedPositionVariance)
    */
   EXPECT_NEAR(gaussian.mean.x, 1.5, 1e-12);
   EXPECT_NEAR(gaussian.covariance[0], 0.75, 1e-12);
+}
+
+TEST(GaussianStatistics, FitsSelectedParticleIndices)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 1.0},
+    {{2.0, 0.0, 0.0}, 1.0},
+    {{100.0, 0.0, 0.0}, 2.0}
+  };
+
+  const std::vector<std::size_t> indices{
+    0U,
+    1U
+  };
+
+  const auto gaussian =
+    hl::fit_gaussian(
+      particles,
+      indices);
+
+  /*
+   * The selected particles contain half of the complete particle mass.
+   */
+  EXPECT_NEAR(
+    gaussian.weight,
+    0.5,
+    1e-12);
+
+  EXPECT_NEAR(
+    gaussian.mean.x,
+    1.0,
+    1e-12);
+
+  EXPECT_NEAR(
+    gaussian.covariance[0],
+    1.0,
+    1e-12);
+
+  EXPECT_EQ(
+    gaussian.sample_count,
+    2U);
+}
+
+TEST(GaussianStatistics, RejectsDuplicateSelectedIndices)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 1.0}
+  };
+
+  const std::vector<std::size_t> indices{
+    0U,
+    0U
+  };
+
+  EXPECT_THROW(
+    static_cast<void>(
+      hl::fit_gaussian(
+        particles,
+        indices)),
+    std::invalid_argument);
 }

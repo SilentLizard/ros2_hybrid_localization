@@ -3,8 +3,8 @@
 <package format="3">
   <name>hybrid_localization_core</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="svenstumm@posteo.de">silent-lizard</maintainer>
+  <description>ROS-independent C++ types and algorithms for adaptive mobile-robot localization using particle-based and Gaussian-mixture belief representations in SE(2).</description>
+  <maintainer email="silent.coding.lizard@gmail.com">silent-lizard</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

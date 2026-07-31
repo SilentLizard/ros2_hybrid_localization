@@ -13,6 +13,7 @@ find_package(ament_cmake REQUIRED)
 # This section is maintained by build.sh.
 # BEGIN AUTO SOURCES
 set(HYBRID_LOCALIZATION_CORE_SOURCES
+  src/gaussian_mixture.cpp
   src/gaussian_statistics.cpp
   src/geometry.cpp
   src/particle_clustering.cpp
@@ -64,6 +65,13 @@ if(BUILD_TESTING)
 
   # This section is maintained by build.sh.
   # BEGIN AUTO TESTS
+  ament_add_gtest(test_gaussian_mixture
+    test/test_gaussian_mixture.cpp
+  )
+  target_link_libraries(test_gaussian_mixture
+    ${PROJECT_NAME}
+  )
+
   ament_add_gtest(test_gaussian_statistics
     test/test_gaussian_statistics.cpp
   )
