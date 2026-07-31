@@ -19,7 +19,7 @@ namespace hl = hybrid_localization;
  * The test also verifies that complete rotations normalize to zero and that
  * angles already inside the requested interval remain unchanged.
  */
-TEST(Se2Statistics, NormalizesAnglesToMinusPiInclusiveInterval)
+TEST(Geometry, NormalizesAnglesToMinusPiInclusiveInterval)
 {
   // 3pi represents the same orientation as pi. Since +pi is excluded from
   // [-pi, pi), the canonical result is -pi.
@@ -50,5 +50,35 @@ TEST(Se2Statistics, NormalizesAnglesToMinusPiInclusiveInterval)
   EXPECT_NEAR(
     hl::normalize_angle(0.5 * std::numbers::pi),
     0.5 * std::numbers::pi,
+    1e-12);
+}
+
+TEST(Geometry, ComputesShortestDifferenceAcrossPositivePiBoundary)
+{
+  constexpr double degrees_to_radians =
+    std::numbers::pi / 180.0;
+
+  const double difference = hl::angle_difference(
+    -179.0 * degrees_to_radians,
+    179.0 * degrees_to_radians);
+
+  EXPECT_NEAR(
+    difference,
+    2.0 * degrees_to_radians,
+    1e-12);
+}
+
+TEST(Geometry, ComputesShortestDifferenceAcrossNegativePiBoundary)
+{
+  constexpr double degrees_to_radians =
+    std::numbers::pi / 180.0;
+
+  const double difference = hl::angle_difference(
+    179.0 * degrees_to_radians,
+    -179.0 * degrees_to_radians);
+
+  EXPECT_NEAR(
+    difference,
+    -2.0 * degrees_to_radians,
     1e-12);
 }

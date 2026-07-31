@@ -5,16 +5,54 @@
 #include <iterator>
 #include <numeric>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace hybrid_localization
 {
+namespace
+{
+
+void validate_particles(
+  const std::span<const WeightedParticle> particles)
+{
+  if (particles.empty()) {
+    throw std::invalid_argument(
+      "Particle set must not be empty");
+  }
+
+  for (std::size_t index = 0; index < particles.size(); ++index) {
+    const auto & particle = particles[index];
+
+    if (!std::isfinite(particle.pose.x) ||
+        !std::isfinite(particle.pose.y) ||
+        !std::isfinite(particle.pose.yaw))
+    {
+      throw std::invalid_argument(
+        "Particle pose values must be finite at index " +
+        std::to_string(index));
+    }
+
+    if (!std::isfinite(particle.weight)) {
+      throw std::invalid_argument(
+        "Particle weight must be finite at index " +
+        std::to_string(index));
+    }
+
+    if (particle.weight < 0.0) {
+      throw std::invalid_argument(
+        "Particle weight must be non-negative at index " +
+        std::to_string(index));
+    }
+  }
+}
+
+}  // namespace
 
 std::vector<WeightedParticle> normalize_weights(
   const std::span<const WeightedParticle> particles)
 {
-  if (particles.empty()) {
-    throw std::invalid_argument("Cannot normalize an empty particle set");
-  }
+  validate_particles(particles);
 
   const double total_weight = std::accumulate(
     particles.begin(),
@@ -51,18 +89,38 @@ Pose2d weighted_mean(
   const auto normalized = normalize_weights(particles);
 
   Pose2d mean{};
-  double sin_sum = 0.0;
-  double cos_sum = 0.0;
+  double weighted_sine = 0.0;
+  double weighted_cosine = 0.0;
 
   for (const auto & particle : normalized) {
     mean.x += particle.weight * particle.pose.x;
     mean.y += particle.weight * particle.pose.y;
 
-    sin_sum += particle.weight * std::sin(particle.pose.yaw);
-    cos_sum += particle.weight * std::cos(particle.pose.yaw);
+    weighted_sine +=
+      particle.weight * std::sin(particle.pose.yaw);
+
+    weighted_cosine +=
+      particle.weight * std::cos(particle.pose.yaw);
   }
 
-  mean.yaw = std::atan2(sin_sum, cos_sum);
+  /*
+   * atan2(0, 0) is mathematically undefined. This can occur when the
+   * orientation distribution is perfectly balanced, for example with equal
+   * weights at 0 and pi.
+   *
+   * Returning zero would falsely imply a well-defined direction, so reject
+   * the ambiguous mean instead.
+   */
+  constexpr double minimum_resultant_length = 1e-12;
+
+  if (std::hypot(weighted_sine, weighted_cosine) <
+      minimum_resultant_length)
+  {
+    throw std::domain_error(
+      "Circular mean is undefined for this orientation distribution");
+  }
+
+  mean.yaw = std::atan2(weighted_sine, weighted_cosine);
   return mean;
 }
 

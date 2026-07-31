@@ -1,4 +1,5 @@
 #include "hybrid_localization_core/gaussian_statistics.hpp"
+
 #include "hybrid_localization_core/geometry.hpp"
 #include "hybrid_localization_core/particle_statistics.hpp"
 
@@ -20,7 +21,7 @@ GaussianComponent fit_gaussian(
   component.sample_count = normalized.size();
 
   for (const auto & particle : normalized) {
-    const std::array<double, 3> delta{
+    const std::array<double, 3> residual{
       particle.pose.x - mean.x,
       particle.pose.y - mean.y,
       angle_difference(particle.pose.yaw, mean.yaw)
@@ -29,7 +30,9 @@ GaussianComponent fit_gaussian(
     for (std::size_t row = 0; row < 3; ++row) {
       for (std::size_t column = 0; column < 3; ++column) {
         component.covariance[row * 3 + column] +=
-          particle.weight * delta[row] * delta[column];
+          particle.weight *
+          residual[row] *
+          residual[column];
       }
     }
   }

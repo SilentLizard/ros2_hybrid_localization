@@ -1,78 +1,60 @@
-#include <cmath>    // std::abs
-#include <numbers>  // std::numbers::pi
-#include <vector>   // std::vector
+#include <cmath>
+#include <limits>
+#include <numbers>
+#include <stdexcept>
+#include <vector>
 
 #include <gtest/gtest.h>
 
-// Public interface of the library to test se2_statistics.
 #include "hybrid_localization_core/particle_statistics.hpp"
 
 namespace hl = hybrid_localization;
 
-
-/**
- * Verify that orientation averaging handles the wraparound at +/-pi.
- *
- * The orientations +179 degrees and -179 degrees are only two degrees apart.
- * An ordinary arithmetic mean would incorrectly produce zero degrees.
- *
- * A circular mean should produce an orientation close to either +pi or -pi.
- * Since both values represent the same physical direction, the test compares
- * the absolute value of the resulting angle with pi.
- */
-TEST(ParticleStatistics, CircularMeanHandlesAngleWraparound)
+TEST(ParticleStatistics, NormalizesWeights)
 {
   const std::vector<hl::WeightedParticle> particles{
-    {
-      {
-        0.0,
-        0.0,
-        179.0 * std::numbers::pi / 180.0
-      },
-      0.5
-    },
-    {
-      {
-        0.0,
-        0.0,
-        -179.0 * std::numbers::pi / 180.0
-      },
-      0.5
-    }
+    {{0.0, 0.0, 0.0}, 1.0},
+    {{1.0, 0.0, 0.0}, 2.0},
+    {{2.0, 0.0, 0.0}, 3.0}
   };
 
-  const auto mean = hl::weighted_mean(particles);
+  const auto normalized = hl::normalize_weights(particles);
 
-  // The result may be represented as either +pi or -pi. Both describe the
-  // same physical orientation, so compare its absolute value with pi.
-  EXPECT_NEAR(
-    std::abs(mean.yaw),
-    std::numbers::pi,
-    1e-6);
+  ASSERT_EQ(normalized.size(), 3U);
+
+  EXPECT_NEAR(normalized[0].weight, 1.0 / 6.0, 1e-12);
+  EXPECT_NEAR(normalized[1].weight, 2.0 / 6.0, 1e-12);
+  EXPECT_NEAR(normalized[2].weight, 3.0 / 6.0, 1e-12);
+
+  const double total =
+    normalized[0].weight +
+    normalized[1].weight +
+    normalized[2].weight;
+
+  EXPECT_NEAR(total, 1.0, 1e-12);
 }
 
-
-/**
- * Verify weighted averaging of position.
- *
- * The second particle has three times the weight of the first particle:
- *
- *   mean x = (1 * 0 + 3 * 10) / 4 = 7.5
- *   mean y = (1 * 0 + 3 *  4) / 4 = 3.0
- *
- * Both yaw values are zero, so the circular yaw mean must also be zero.
- */
-TEST(Se2Statistics, ComputesWeightedMean)
+TEST(ParticleStatistics, DoesNotModifyOriginalWeights)
 {
   const std::vector<hl::WeightedParticle> particles{
-    {
-      {0.0, 0.0, 0.0},
-      1.0
-    },
-    {
-      {10.0, 4.0, 0.0},
-      3.0
-    }
+    {{0.0, 0.0, 0.0}, 2.0},
+    {{1.0, 0.0, 0.0}, 3.0}
+  };
+
+  const auto normalized = hl::normalize_weights(particles);
+
+  EXPECT_DOUBLE_EQ(particles[0].weight, 2.0);
+  EXPECT_DOUBLE_EQ(particles[1].weight, 3.0);
+
+  EXPECT_NEAR(normalized[0].weight, 0.4, 1e-12);
+  EXPECT_NEAR(normalized[1].weight, 0.6, 1e-12);
+}
+
+TEST(ParticleStatistics, ComputesWeightedPositionMean)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 1.0},
+    {{10.0, 4.0, 0.0}, 3.0}
   };
 
   const auto mean = hl::weighted_mean(particles);
@@ -82,40 +64,155 @@ TEST(Se2Statistics, ComputesWeightedMean)
   EXPECT_NEAR(mean.yaw, 0.0, 1e-12);
 }
 
-
-/**
- * Verify the effective sample size for equally weighted particles.
- *
- * After normalization, each of four equal particles has weight 0.25:
- *
- *   sum(w_i^2) = 4 * 0.25^2 = 0.25
- *   N_eff      = 1 / 0.25     = 4
- *
- * This means all four particles contribute equally to the estimate.
- */
-TEST(Se2Statistics, EffectiveSampleSizeReflectsWeights)
+TEST(ParticleStatistics, ComputesWeightedCircularYawMean)
 {
-  const std::vector<hl::WeightedParticle> equal_particles{
+  constexpr double degrees_to_radians =
+    std::numbers::pi / 180.0;
+
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 10.0 * degrees_to_radians}, 1.0},
+    {{0.0, 0.0, 30.0 * degrees_to_radians}, 3.0}
+  };
+
+  const auto mean = hl::weighted_mean(particles);
+
+  /*
+   * Circular means are not generally identical to arithmetic means, so use
+   * the independently calculated atan2 result.
+   */
+  const double expected = std::atan2(
+    std::sin(10.0 * degrees_to_radians) +
+      3.0 * std::sin(30.0 * degrees_to_radians),
+    std::cos(10.0 * degrees_to_radians) +
+      3.0 * std::cos(30.0 * degrees_to_radians));
+
+  EXPECT_NEAR(mean.yaw, expected, 1e-12);
+}
+
+TEST(ParticleStatistics, HandlesCircularMeanAcrossAngleWraparound)
+{
+  constexpr double degrees_to_radians =
+    std::numbers::pi / 180.0;
+
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 179.0 * degrees_to_radians}, 0.5},
+    {{0.0, 0.0, -179.0 * degrees_to_radians}, 0.5}
+  };
+
+  const auto mean = hl::weighted_mean(particles);
+
+  EXPECT_NEAR(
+    std::abs(mean.yaw),
+    std::numbers::pi,
+    1e-12);
+}
+
+TEST(ParticleStatistics, CalculatesEffectiveSampleSizeForEqualWeights)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 1.0},
+    {{1.0, 0.0, 0.0}, 1.0},
+    {{2.0, 0.0, 0.0}, 1.0},
+    {{3.0, 0.0, 0.0}, 1.0}
+  };
+
+  EXPECT_NEAR(
+    hl::effective_sample_size(particles),
+    4.0,
+    1e-12);
+}
+
+TEST(ParticleStatistics, CalculatesEffectiveSampleSizeForUnequalWeights)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 0.7},
+    {{1.0, 0.0, 0.0}, 0.1},
+    {{2.0, 0.0, 0.0}, 0.1},
+    {{3.0, 0.0, 0.0}, 0.1}
+  };
+
+  const double expected =
+    1.0 / (0.7 * 0.7 + 3.0 * 0.1 * 0.1);
+
+  EXPECT_NEAR(
+    hl::effective_sample_size(particles),
+    expected,
+    1e-12);
+}
+
+TEST(ParticleStatistics, RejectsEmptyParticleSet)
+{
+  const std::vector<hl::WeightedParticle> particles;
+
+  EXPECT_THROW(
+    static_cast<void>(hl::normalize_weights(particles)),
+    std::invalid_argument);
+}
+
+TEST(ParticleStatistics, RejectsAllZeroWeights)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 0.0},
+    {{1.0, 0.0, 0.0}, 0.0}
+  };
+
+  EXPECT_THROW(
+    static_cast<void>(hl::normalize_weights(particles)),
+    std::invalid_argument);
+}
+
+TEST(ParticleStatistics, RejectsNegativeWeights)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, -1.0},
+    {{1.0, 0.0, 0.0}, 2.0}
+  };
+
+  EXPECT_THROW(
+    static_cast<void>(hl::normalize_weights(particles)),
+    std::invalid_argument);
+}
+
+TEST(ParticleStatistics, RejectsNonFiniteWeights)
+{
+  const std::vector<hl::WeightedParticle> particles{
     {
       {0.0, 0.0, 0.0},
-      1.0
-    },
+      std::numeric_limits<double>::quiet_NaN()
+    }
+  };
+
+  EXPECT_THROW(
+    static_cast<void>(hl::normalize_weights(particles)),
+    std::invalid_argument);
+}
+
+TEST(ParticleStatistics, RejectsNonFinitePoseValues)
+{
+  const std::vector<hl::WeightedParticle> particles{
     {
-      {1.0, 0.0, 0.0},
-      1.0
-    },
-    {
-      {2.0, 0.0, 0.0},
-      1.0
-    },
-    {
-      {3.0, 0.0, 0.0},
+      {
+        std::numeric_limits<double>::infinity(),
+        0.0,
+        0.0
+      },
       1.0
     }
   };
 
-  EXPECT_NEAR(
-    hl::effective_sample_size(equal_particles),
-    4.0,
-    1e-12);
+  EXPECT_THROW(
+    static_cast<void>(hl::weighted_mean(particles)),
+    std::invalid_argument);
+}
+
+TEST(ParticleStatistics, RejectsUndefinedCircularMean)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 0.5},
+    {{0.0, 0.0, std::numbers::pi}, 0.5}
+  };
+
+  EXPECT_THROW(
+    static_cast<void>(hl::weighted_mean(particles)),
+    std::domain_error);
 }
