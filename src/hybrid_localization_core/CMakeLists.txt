@@ -15,6 +15,7 @@ find_package(ament_cmake REQUIRED)
 set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/gaussian_statistics.cpp
   src/geometry.cpp
+  src/particle_clustering.cpp
   src/particle_statistics.cpp
 )
 # END AUTO SOURCES
@@ -74,6 +75,13 @@ if(BUILD_TESTING)
     test/test_geometry.cpp
   )
   target_link_libraries(test_geometry
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_particle_clustering
+    test/test_particle_clustering.cpp
+  )
+  target_link_libraries(test_particle_clustering
     ${PROJECT_NAME}
   )
 
