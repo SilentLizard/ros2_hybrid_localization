@@ -18,6 +18,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/geometry.cpp
   src/particle_clustering.cpp
   src/particle_statistics.cpp
+  src/recovery_sampling.cpp
 )
 # END AUTO SOURCES
 
@@ -97,6 +98,13 @@ if(BUILD_TESTING)
     test/test_particle_statistics.cpp
   )
   target_link_libraries(test_particle_statistics
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_recovery_sampling
+    test/test_recovery_sampling.cpp
+  )
+  target_link_libraries(test_recovery_sampling
     ${PROJECT_NAME}
   )
   # END AUTO TESTS
