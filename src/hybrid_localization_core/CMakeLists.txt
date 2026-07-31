@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 3.16)
+project(hybrid_localization_core LANGUAGES CXX)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 20)
+endif()
+
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(ament_cmake REQUIRED)
+
+# This section is maintained by build.sh.
+# BEGIN AUTO SOURCES
+set(HYBRID_LOCALIZATION_CORE_SOURCES
+  src/gaussian_statistics.cpp
+  src/geometry.cpp
+  src/particle_statistics.cpp
+)
+# END AUTO SOURCES
+
+add_library(${PROJECT_NAME}
+  ${HYBRID_LOCALIZATION_CORE_SOURCES}
+)
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_compile_options(${PROJECT_NAME}
+  PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wconversion
+    -Wshadow
+)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
+
+ament_export_targets(
+  export_${PROJECT_NAME}
+  HAS_LIBRARY_TARGET
+)
+
+ament_export_include_directories(include)
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  # This section is maintained by build.sh.
+  # BEGIN AUTO TESTS
+  ament_add_gtest(test_gaussian_statistics
+    test/test_gaussian_statistics.cpp
+  )
+  target_link_libraries(test_gaussian_statistics
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_geometry
+    test/test_geometry.cpp
+  )
+  target_link_libraries(test_geometry
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_particle_statistics
+    test/test_particle_statistics.cpp
+  )
+  target_link_libraries(test_particle_statistics
+    ${PROJECT_NAME}
+  )
+  # END AUTO TESTS
+endif()
+
+ament_package()
