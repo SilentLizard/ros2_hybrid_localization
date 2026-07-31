@@ -23,6 +23,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/gaussian_statistics.cpp
   src/geometry.cpp
   src/global_particle_sampling.cpp
+  src/localization_health.cpp
   src/particle_clustering.cpp
   src/particle_statistics.cpp
   src/recovery_sampling.cpp
@@ -140,6 +141,13 @@ if(BUILD_TESTING)
     test/test_global_particle_sampling.cpp
   )
   target_link_libraries(test_global_particle_sampling
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_localization_health
+    test/test_localization_health.cpp
+  )
+  target_link_libraries(test_localization_health
     ${PROJECT_NAME}
   )
 
