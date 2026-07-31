@@ -25,6 +25,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/global_particle_sampling.cpp
   src/localization_health.cpp
   src/particle_clustering.cpp
+  src/particle_gmm_comparison.cpp
   src/particle_statistics.cpp
   src/recovery_sampling.cpp
 )
@@ -155,6 +156,13 @@ if(BUILD_TESTING)
     test/test_particle_clustering.cpp
   )
   target_link_libraries(test_particle_clustering
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_particle_gmm_comparison
+    test/test_particle_gmm_comparison.cpp
+  )
+  target_link_libraries(test_particle_gmm_comparison
     ${PROJECT_NAME}
   )
 
