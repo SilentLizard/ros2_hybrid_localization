@@ -13,6 +13,7 @@ find_package(ament_cmake REQUIRED)
 # This section is maintained by build.sh.
 # BEGIN AUTO SOURCES
 set(HYBRID_LOCALIZATION_CORE_SOURCES
+  src/adaptive_recovery_sampling.cpp
   src/gaussian_fit_quality.cpp
   src/gaussian_mixture.cpp
   src/gaussian_statistics.cpp
@@ -68,6 +69,13 @@ if(BUILD_TESTING)
 
   # This section is maintained by build.sh.
   # BEGIN AUTO TESTS
+  ament_add_gtest(test_adaptive_recovery_sampling
+    test/test_adaptive_recovery_sampling.cpp
+  )
+  target_link_libraries(test_adaptive_recovery_sampling
+    ${PROJECT_NAME}
+  )
+
   ament_add_gtest(test_gaussian_fit_quality
     test/test_gaussian_fit_quality.cpp
   )
