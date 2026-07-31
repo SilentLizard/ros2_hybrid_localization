@@ -17,6 +17,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/gaussian_fit_quality.cpp
   src/gaussian_mixture.cpp
   src/gaussian_mixture_prediction.cpp
+  src/gaussian_mixture_update.cpp
   src/gaussian_statistics.cpp
   src/geometry.cpp
   src/global_particle_sampling.cpp
@@ -95,6 +96,13 @@ if(BUILD_TESTING)
     test/test_gaussian_mixture_prediction.cpp
   )
   target_link_libraries(test_gaussian_mixture_prediction
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_gaussian_mixture_update
+    test/test_gaussian_mixture_update.cpp
+  )
+  target_link_libraries(test_gaussian_mixture_update
     ${PROJECT_NAME}
   )
 
