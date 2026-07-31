@@ -121,3 +121,80 @@ TEST(GaussianStatistics, ProducesSymmetricCovarianceMatrix)
     gaussian.covariance[7],
     1e-12);
 }
+
+TEST(GaussianStatistics, ComputesPositionYawCrossCovariance)
+{
+  /*
+   * Two equally weighted poses:
+   *
+   *   p0 = (x = 0, yaw = 0)
+   *   p1 = (x = 2, yaw = 0.2)
+   *
+   * Mean:
+   *
+   *   mean x   = 1
+   *   mean yaw = 0.1
+   *
+   * Residuals:
+   *
+   *   r0 = (-1, -0.1)
+   *   r1 = ( 1,  0.1)
+   *
+   * Therefore:
+   *
+   *   cov(x, yaw)
+   *     = 0.5 * (-1 * -0.1)
+   *     + 0.5 * ( 1 *  0.1)
+   *     = 0.1
+   */
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 0.5},
+    {{2.0, 0.0, 0.2}, 0.5}
+  };
+
+  const auto gaussian = hl::fit_gaussian(particles);
+
+  EXPECT_NEAR(
+    gaussian.covariance[2],
+    0.1,
+    1e-12);
+
+  EXPECT_NEAR(
+    gaussian.covariance[6],
+    0.1,
+    1e-12);
+
+  EXPECT_NEAR(
+    gaussian.covariance[8],
+    0.01,
+    1e-12);
+}
+
+TEST(GaussianStatistics, ComputesWeightedPositionVariance)
+{
+  const std::vector<hl::WeightedParticle> particles{
+    {{0.0, 0.0, 0.0}, 1.0},
+    {{2.0, 0.0, 0.0}, 3.0}
+  };
+
+  const auto gaussian = hl::fit_gaussian(particles);
+
+  /*
+   * Normalized weights:
+   *
+   *   w0 = 0.25
+   *   w1 = 0.75
+   *
+   * Mean x:
+   *
+   *   mean = 0.25 * 0 + 0.75 * 2 = 1.5
+   *
+   * Variance:
+   *
+   *   0.25 * (-1.5)^2 + 0.75 * (0.5)^2
+   *   = 0.5625 + 0.1875
+   *   = 0.75
+   */
+  EXPECT_NEAR(gaussian.mean.x, 1.5, 1e-12);
+  EXPECT_NEAR(gaussian.covariance[0], 0.75, 1e-12);
+}

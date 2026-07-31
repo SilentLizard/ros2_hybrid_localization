@@ -6,7 +6,7 @@
 namespace hybrid_localization
 {
 
-//Pose2d data type as tuple including Euclidean space position in x y and rotation around z axis 
+/// A planar pose in SE(2).
 struct Pose2d
 {
   double x{0.0};
@@ -14,21 +14,20 @@ struct Pose2d
   double yaw{0.0};
 };
 
-//WeightedParticle data type for AMCL including Pose2d pose and particle weight for hypothesis rating
+/// A weighted pose sample in a particle-based belief representation.
 struct WeightedParticle
 {
   Pose2d pose{};
   double weight{0.0};
 };
 
-//GaussianComponent data type for GMM including mean Pose2d, covariance matrix for the gaussian model and weight for hypothesis rating
+/// A locally Gaussian pose hypothesis.
+///
+/// Covariance is stored row-major for [x, y, yaw].
 struct GaussianComponent
 {
   Pose2d mean{};
-
-  // Row-major covariance for [x, y, yaw].
   std::array<double, 9> covariance{};
-
   double weight{0.0};
   std::size_t sample_count{0};
 };
