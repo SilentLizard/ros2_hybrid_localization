@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ament_cmake REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # This section is maintained by build.sh.
 # BEGIN AUTO SOURCES
@@ -35,6 +37,11 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
 
 add_library(${PROJECT_NAME}
   ${HYBRID_LOCALIZATION_CORE_SOURCES}
+)
+
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+    Eigen3::Eigen
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -71,6 +78,7 @@ ament_export_targets(
 )
 
 ament_export_include_directories(include)
+ament_export_dependencies(eigen3_cmake_module Eigen3)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
@@ -158,6 +166,13 @@ if(BUILD_TESTING)
     test/test_localization_health.cpp
   )
   target_link_libraries(test_localization_health
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_matrix3
+    test/test_matrix3.cpp
+  )
+  target_link_libraries(test_matrix3
     ${PROJECT_NAME}
   )
 

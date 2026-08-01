@@ -1,5 +1,6 @@
 #include "hybrid_localization_core/gaussian_mixture_merging.hpp"
 
+#include "hybrid_localization_core/detail/matrix3.hpp"
 #include "hybrid_localization_core/geometry.hpp"
 
 #include <algorithm>
@@ -17,8 +18,8 @@ namespace hybrid_localization
 namespace
 {
 
-using Matrix3 = std::array<double, 9>;
-using Vector3 = std::array<double, 3>;
+using Matrix3 = detail::Matrix3Storage;
+using Vector3 = detail::Vector3Storage;
 
 [[nodiscard]] double & at(Matrix3 & matrix, const std::size_t row, const std::size_t column)
 {
@@ -70,59 +71,18 @@ void validate_config(const GaussianMixtureMergingConfig & config)
 
 [[nodiscard]] double determinant(const Matrix3 & matrix)
 {
-  return
-    at(matrix, 0U, 0U) *
-    (at(matrix, 1U, 1U) * at(matrix, 2U, 2U) -
-    at(matrix, 1U, 2U) * at(matrix, 2U, 1U)) -
-    at(matrix, 0U, 1U) *
-    (at(matrix, 1U, 0U) * at(matrix, 2U, 2U) -
-    at(matrix, 1U, 2U) * at(matrix, 2U, 0U)) +
-    at(matrix, 0U, 2U) *
-    (at(matrix, 1U, 0U) * at(matrix, 2U, 1U) -
-    at(matrix, 1U, 1U) * at(matrix, 2U, 0U));
+  return detail::determinant(matrix);
 }
 
 void validate_covariance(
   const Matrix3 & covariance,
   const GaussianMixtureMergingConfig & config)
 {
-  for (const double value : covariance) {
-    if (!std::isfinite(value)) {
-      throw std::invalid_argument("Gaussian covariance must be finite");
-    }
-  }
-
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = row + 1U; column < 3U; ++column) {
-      if (std::abs(at(covariance, row, column) -
-        at(covariance, column, row)) > config.covariance_symmetry_tolerance)
-      {
-        throw std::invalid_argument("Gaussian covariance must be symmetric");
-      }
-    }
-  }
-
-  const double m00 = at(covariance, 0U, 0U);
-  const double m11 = at(covariance, 1U, 1U);
-  const double m22 = at(covariance, 2U, 2U);
-  const double minor01 = m00 * m11 -
-    at(covariance, 0U, 1U) * at(covariance, 1U, 0U);
-  const double minor02 = m00 * m22 -
-    at(covariance, 0U, 2U) * at(covariance, 2U, 0U);
-  const double minor12 = m11 * m22 -
-    at(covariance, 1U, 2U) * at(covariance, 2U, 1U);
-
-  if (m00 < -config.covariance_psd_tolerance ||
-    m11 < -config.covariance_psd_tolerance ||
-    m22 < -config.covariance_psd_tolerance ||
-    minor01 < -config.covariance_psd_tolerance ||
-    minor02 < -config.covariance_psd_tolerance ||
-    minor12 < -config.covariance_psd_tolerance ||
-    determinant(covariance) < -config.covariance_psd_tolerance)
-  {
-    throw std::invalid_argument(
-            "Gaussian covariance must be positive semidefinite");
-  }
+  detail::validate_covariance(
+    covariance,
+    config.covariance_symmetry_tolerance,
+    config.covariance_psd_tolerance,
+    "Gaussian covariance");
 }
 
 void validate_mixture(
@@ -164,55 +124,14 @@ void validate_mixture(
 
 [[nodiscard]] Matrix3 inverse(const Matrix3 & matrix)
 {
-  const double det = determinant(matrix);
-  if (!std::isfinite(det) || det <= 0.0) {
-    throw std::runtime_error(
-            "Regularized merge covariance must be positive definite");
-  }
-
-  Matrix3 result{};
-  at(result, 0U, 0U) =
-    (at(matrix, 1U, 1U) * at(matrix, 2U, 2U) -
-    at(matrix, 1U, 2U) * at(matrix, 2U, 1U)) / det;
-  at(result, 0U, 1U) =
-    (at(matrix, 0U, 2U) * at(matrix, 2U, 1U) -
-    at(matrix, 0U, 1U) * at(matrix, 2U, 2U)) / det;
-  at(result, 0U, 2U) =
-    (at(matrix, 0U, 1U) * at(matrix, 1U, 2U) -
-    at(matrix, 0U, 2U) * at(matrix, 1U, 1U)) / det;
-  at(result, 1U, 0U) =
-    (at(matrix, 1U, 2U) * at(matrix, 2U, 0U) -
-    at(matrix, 1U, 0U) * at(matrix, 2U, 2U)) / det;
-  at(result, 1U, 1U) =
-    (at(matrix, 0U, 0U) * at(matrix, 2U, 2U) -
-    at(matrix, 0U, 2U) * at(matrix, 2U, 0U)) / det;
-  at(result, 1U, 2U) =
-    (at(matrix, 0U, 2U) * at(matrix, 1U, 0U) -
-    at(matrix, 0U, 0U) * at(matrix, 1U, 2U)) / det;
-  at(result, 2U, 0U) =
-    (at(matrix, 1U, 0U) * at(matrix, 2U, 1U) -
-    at(matrix, 1U, 1U) * at(matrix, 2U, 0U)) / det;
-  at(result, 2U, 1U) =
-    (at(matrix, 0U, 1U) * at(matrix, 2U, 0U) -
-    at(matrix, 0U, 0U) * at(matrix, 2U, 1U)) / det;
-  at(result, 2U, 2U) =
-    (at(matrix, 0U, 0U) * at(matrix, 1U, 1U) -
-    at(matrix, 0U, 1U) * at(matrix, 1U, 0U)) / det;
-  return result;
+  return detail::inverse_positive_definite(matrix, "Regularized merge covariance");
 }
 
 [[nodiscard]] double quadratic_form(
   const Vector3 & vector,
   const Matrix3 & matrix)
 {
-  Vector3 product{};
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = 0U; column < 3U; ++column) {
-      product[row] += at(matrix, row, column) * vector[column];
-    }
-  }
-  return vector[0] * product[0] + vector[1] * product[1] +
-         vector[2] * product[2];
+  return detail::quadratic_form(vector, matrix);
 }
 
 [[nodiscard]] double merge_distance_squared(

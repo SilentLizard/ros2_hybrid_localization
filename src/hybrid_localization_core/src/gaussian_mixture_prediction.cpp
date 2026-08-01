@@ -1,5 +1,6 @@
 #include "hybrid_localization_core/gaussian_mixture_prediction.hpp"
 
+#include "hybrid_localization_core/detail/matrix3.hpp"
 #include "hybrid_localization_core/geometry.hpp"
 
 #include <algorithm>
@@ -14,7 +15,7 @@ namespace hybrid_localization
 namespace
 {
 
-using Matrix3 = std::array<double, 9>;
+using Matrix3 = detail::Matrix3Storage;
 
 [[nodiscard]] constexpr std::size_t index(
   const std::size_t row,
@@ -46,102 +47,31 @@ void validate_covariance(
   const double psd_tolerance,
   const char * name)
 {
-  for (const double value : covariance) {
-    if (!std::isfinite(value)) {
-      throw std::invalid_argument(std::string(name) + " must contain only finite values");
-    }
-  }
-
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = row + 1U; column < 3U; ++column) {
-      if (std::abs(
-          covariance[index(row, column)] -
-          covariance[index(column, row)]) > symmetry_tolerance)
-      {
-        throw std::invalid_argument(std::string(name) + " must be symmetric");
-      }
-    }
-  }
-
-  // Positive-semidefinite check using principal minors for a symmetric 3x3 matrix.
-  const double a = covariance[0U];
-  const double b = covariance[1U];
-  const double c = covariance[2U];
-  const double d = covariance[4U];
-  const double e = covariance[5U];
-  const double f = covariance[8U];
-
-  if (a < -psd_tolerance || d < -psd_tolerance || f < -psd_tolerance) {
-    throw std::invalid_argument(std::string(name) + " must be positive semidefinite");
-  }
-
-  if (a * d - b * b < -psd_tolerance ||
-    a * f - c * c < -psd_tolerance ||
-    d * f - e * e < -psd_tolerance)
-  {
-    throw std::invalid_argument(std::string(name) + " must be positive semidefinite");
-  }
-
-  const double determinant =
-    a * (d * f - e * e) -
-    b * (b * f - c * e) +
-    c * (b * e - c * d);
-
-  if (determinant < -psd_tolerance) {
-    throw std::invalid_argument(std::string(name) + " must be positive semidefinite");
-  }
+  detail::validate_covariance(covariance, symmetry_tolerance, psd_tolerance, name);
 }
 
 [[nodiscard]] Matrix3 transpose(const Matrix3 & matrix)
 {
-  Matrix3 result{};
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = 0U; column < 3U; ++column) {
-      result[index(row, column)] = matrix[index(column, row)];
-    }
-  }
-  return result;
+  return detail::transpose(matrix);
 }
 
 [[nodiscard]] Matrix3 multiply(
   const Matrix3 & lhs,
   const Matrix3 & rhs)
 {
-  Matrix3 result{};
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = 0U; column < 3U; ++column) {
-      double value = 0.0;
-      for (std::size_t inner = 0U; inner < 3U; ++inner) {
-        value += lhs[index(row, inner)] * rhs[index(inner, column)];
-      }
-      result[index(row, column)] = value;
-    }
-  }
-  return result;
+  return detail::multiply(lhs, rhs);
 }
 
 [[nodiscard]] Matrix3 add(
   const Matrix3 & lhs,
   const Matrix3 & rhs)
 {
-  Matrix3 result{};
-  for (std::size_t i = 0U; i < result.size(); ++i) {
-    result[i] = lhs[i] + rhs[i];
-  }
-  return result;
+  return detail::add(lhs, rhs);
 }
 
 void symmetrize(Matrix3 & covariance)
 {
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = row + 1U; column < 3U; ++column) {
-      const double average = 0.5 * (
-        covariance[index(row, column)] +
-        covariance[index(column, row)]);
-      covariance[index(row, column)] = average;
-      covariance[index(column, row)] = average;
-    }
-  }
+  detail::symmetrize(covariance);
 }
 
 void validate_config(const GaussianPredictionConfig & config)

@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "hybrid_localization_core/adaptive_recovery_sampling.hpp"
+#include "hybrid_localization_core/detail/matrix3.hpp"
 
 namespace hybrid_localization
 {
@@ -32,16 +33,11 @@ void validate_mixture(const GaussianMixture & mixture)
     {
       throw std::invalid_argument("invalid component mean");
     }
-    for (const double value : component.covariance) {
-      if (!std::isfinite(value)) {
-        throw std::invalid_argument("invalid component covariance");
-      }
-    }
-    if (component.covariance[0U] < 0.0 || component.covariance[4U] < 0.0 ||
-      component.covariance[8U] < 0.0)
-    {
-      throw std::invalid_argument("negative component variance");
-    }
+    detail::validate_covariance(
+      component.covariance,
+      1e-12,
+      1e-12,
+      "Component covariance");
     total_mass += component.weight;
   }
 

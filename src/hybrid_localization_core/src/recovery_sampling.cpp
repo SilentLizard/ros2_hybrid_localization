@@ -1,5 +1,6 @@
 #include "hybrid_localization_core/recovery_sampling.hpp"
 
+#include "hybrid_localization_core/detail/matrix3.hpp"
 #include "hybrid_localization_core/geometry.hpp"
 
 #include <algorithm>
@@ -21,7 +22,7 @@ namespace
 constexpr double covariance_tolerance = 1e-12;
 constexpr double mass_tolerance = 1e-12;
 
-using Matrix3 = std::array<double, 9>;
+using Matrix3 = detail::Matrix3Storage;
 
 [[nodiscard]] bool is_finite_pose(const Pose2d & pose) noexcept
 {
@@ -33,70 +34,21 @@ using Matrix3 = std::array<double, 9>;
 
 void validate_covariance(const Matrix3 & covariance)
 {
-  for (const double value : covariance) {
-    if (!std::isfinite(value)) {
-      throw std::invalid_argument(
-              "Gaussian covariance must contain only finite values");
-    }
-  }
-
-  if (
-    std::abs(covariance[1] - covariance[3]) > covariance_tolerance ||
-    std::abs(covariance[2] - covariance[6]) > covariance_tolerance ||
-    std::abs(covariance[5] - covariance[7]) > covariance_tolerance)
-  {
-    throw std::invalid_argument("Gaussian covariance must be symmetric");
-  }
-
-  if (
-    covariance[0] < -covariance_tolerance ||
-    covariance[4] < -covariance_tolerance ||
-    covariance[8] < -covariance_tolerance)
-  {
-    throw std::invalid_argument(
-            "Gaussian covariance diagonal must be nonnegative");
-  }
+  detail::validate_covariance(
+    covariance, covariance_tolerance, covariance_tolerance, "Gaussian covariance");
 }
 
-[[nodiscard]] Matrix3 cholesky_factor(
+[[nodiscard]] Matrix3 covariance_factor(
   const Matrix3 & covariance,
   const double inflation_factor)
 {
-  Matrix3 lower{};
+  const detail::Matrix3 inflated =
+    inflation_factor * detail::matrix3_from_row_major(covariance);
 
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = 0U; column <= row; ++column) {
-      double value =
-        covariance[row * 3U + column] * inflation_factor;
-
-      for (std::size_t k = 0U; k < column; ++k) {
-        value -=
-          lower[row * 3U + k] *
-          lower[column * 3U + k];
-      }
-
-      if (row == column) {
-        if (value < -covariance_tolerance) {
-          throw std::invalid_argument(
-                  "Gaussian covariance must be positive semidefinite");
-        }
-
-        lower[row * 3U + column] =
-          std::sqrt(std::max(0.0, value));
-      } else {
-        const double diagonal = lower[column * 3U + column];
-
-        if (diagonal > covariance_tolerance) {
-          lower[row * 3U + column] = value / diagonal;
-        } else if (std::abs(value) > covariance_tolerance) {
-          throw std::invalid_argument(
-                  "Gaussian covariance must be positive semidefinite");
-        }
-      }
-    }
-  }
-
-  return lower;
+  return detail::positive_semidefinite_square_root(
+    detail::matrix3_to_row_major(inflated),
+    covariance_tolerance,
+    "Inflated recovery covariance");
 }
 
 [[nodiscard]] std::vector<std::size_t> allocate_samples(
@@ -196,8 +148,8 @@ std::vector<WeightedParticle> sample_recovery_particles(
   std::vector<double> normalized_weights;
   normalized_weights.reserve(mixture.components.size());
 
-  std::vector<Matrix3> cholesky_factors;
-  cholesky_factors.reserve(mixture.components.size());
+  std::vector<Matrix3> covariance_factors;
+  covariance_factors.reserve(mixture.components.size());
 
   double represented_weight = 0.0;
 
@@ -215,8 +167,8 @@ std::vector<WeightedParticle> sample_recovery_particles(
 
     represented_weight += component.weight;
     normalized_weights.push_back(component.weight);
-    cholesky_factors.push_back(
-      cholesky_factor(
+    covariance_factors.push_back(
+      covariance_factor(
         component.covariance,
         config.covariance_inflation_factor));
   }
@@ -254,7 +206,7 @@ std::vector<WeightedParticle> sample_recovery_particles(
        ++component_index)
   {
     const GaussianComponent & component = mixture.components[component_index];
-    const Matrix3 & lower = cholesky_factors[component_index];
+    const Matrix3 & factor = covariance_factors[component_index];
 
     for (std::size_t sample = 0U;
          sample < allocations[component_index];
@@ -265,14 +217,18 @@ std::vector<WeightedParticle> sample_recovery_particles(
         standard_normal(generator),
         standard_normal(generator)};
 
-      const double delta_x = lower[0] * normal[0];
+      const double delta_x =
+        factor[0] * normal[0] +
+        factor[1] * normal[1] +
+        factor[2] * normal[2];
       const double delta_y =
-        lower[3] * normal[0] +
-        lower[4] * normal[1];
+        factor[3] * normal[0] +
+        factor[4] * normal[1] +
+        factor[5] * normal[2];
       const double delta_yaw =
-        lower[6] * normal[0] +
-        lower[7] * normal[1] +
-        lower[8] * normal[2];
+        factor[6] * normal[0] +
+        factor[7] * normal[1] +
+        factor[8] * normal[2];
 
       particles.push_back({
         {

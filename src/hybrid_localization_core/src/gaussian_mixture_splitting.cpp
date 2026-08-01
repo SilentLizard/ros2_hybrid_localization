@@ -1,6 +1,7 @@
 #include "hybrid_localization_core/gaussian_mixture_splitting.hpp"
 
 #include "hybrid_localization_core/gaussian_statistics.hpp"
+#include "hybrid_localization_core/detail/matrix3.hpp"
 #include "hybrid_localization_core/geometry.hpp"
 #include "hybrid_localization_core/particle_statistics.hpp"
 
@@ -97,27 +98,12 @@ void validate_component(const GaussianComponent & component)
   if (!std::isfinite(component.weight) || component.weight <= 0.0) {
     throw std::invalid_argument("Component weight must be finite and positive");
   }
-  for (const double value : component.covariance) {
-    if (!std::isfinite(value)) {
-      throw std::invalid_argument("Component covariance must be finite");
-    }
-  }
-  constexpr double symmetry_tolerance = 1e-12;
-  for (std::size_t row = 0U; row < dimension; ++row) {
-    if (component.covariance[row * dimension + row] < 0.0) {
-      throw std::invalid_argument(
-        "Component covariance diagonal must be nonnegative");
-    }
-    for (std::size_t column = row + 1U; column < dimension; ++column) {
-      if (std::abs(
-          component.covariance[row * dimension + column] -
-          component.covariance[column * dimension + row]) >
-        symmetry_tolerance)
-      {
-        throw std::invalid_argument("Component covariance must be symmetric");
-      }
-    }
-  }
+  constexpr double covariance_tolerance = 1e-12;
+  detail::validate_covariance(
+    component.covariance,
+    covariance_tolerance,
+    covariance_tolerance,
+    "Component covariance");
 }
 
 void validate_mixture(
@@ -174,49 +160,7 @@ void validate_fit_quality(const GaussianFitQuality & quality)
 [[nodiscard]] std::array<double, dimension> dominant_direction(
   const std::array<double, 9> & covariance)
 {
-  std::array<double, dimension> direction{1.0, 0.0, 0.0};
-
-  std::size_t largest_diagonal = 0U;
-  for (std::size_t index = 1U; index < dimension; ++index) {
-    if (covariance[index * dimension + index] >
-        covariance[largest_diagonal * dimension + largest_diagonal])
-    {
-      largest_diagonal = index;
-    }
-  }
-  direction = {0.0, 0.0, 0.0};
-  direction[largest_diagonal] = 1.0;
-
-  for (std::size_t iteration = 0U; iteration < 16U; ++iteration) {
-    std::array<double, dimension> next{};
-    for (std::size_t row = 0U; row < dimension; ++row) {
-      for (std::size_t column = 0U; column < dimension; ++column) {
-        next[row] += covariance[row * dimension + column] * direction[column];
-      }
-    }
-
-    const double norm = std::sqrt(
-      next[0] * next[0] + next[1] * next[1] + next[2] * next[2]);
-    if (norm <= 1e-15) {
-      return direction;
-    }
-    for (double & value : next) {
-      value /= norm;
-    }
-    direction = next;
-  }
-
-  for (const double value : direction) {
-    if (std::abs(value) > 1e-15) {
-      if (value < 0.0) {
-        for (double & entry : direction) {
-          entry = -entry;
-        }
-      }
-      break;
-    }
-  }
-  return direction;
+  return detail::dominant_eigenvector(covariance, "Split component covariance");
 }
 
 struct ProjectedIndex

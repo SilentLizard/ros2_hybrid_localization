@@ -1,5 +1,6 @@
 #include "hybrid_localization_core/gaussian_fit_quality.hpp"
 
+#include "hybrid_localization_core/detail/matrix3.hpp"
 #include "hybrid_localization_core/geometry.hpp"
 #include "hybrid_localization_core/particle_statistics.hpp"
 
@@ -16,7 +17,7 @@ namespace
 {
 
 constexpr double covariance_tolerance = 1e-12;
-using Matrix3 = std::array<double, 9>;
+using Matrix3 = detail::Matrix3Storage;
 
 [[nodiscard]] bool is_finite_pose(const Pose2d & pose) noexcept
 {
@@ -52,81 +53,25 @@ void validate_indices(
 
 void validate_covariance(const Matrix3 & covariance)
 {
-  for (const double value : covariance) {
-    if (!std::isfinite(value)) {
-      throw std::invalid_argument(
-              "Gaussian covariance must contain only finite values");
-    }
-  }
-
-  if (
-    std::abs(covariance[1] - covariance[3]) > covariance_tolerance ||
-    std::abs(covariance[2] - covariance[6]) > covariance_tolerance ||
-    std::abs(covariance[5] - covariance[7]) > covariance_tolerance)
-  {
-    throw std::invalid_argument("Gaussian covariance must be symmetric");
-  }
+  detail::validate_covariance(
+    covariance, covariance_tolerance, covariance_tolerance, "Gaussian covariance");
 }
 
 [[nodiscard]] Matrix3 regularized_cholesky_factor(
   const Matrix3 & covariance,
   const double regularization)
 {
-  Matrix3 lower{};
-
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    for (std::size_t column = 0U; column <= row; ++column) {
-      double value = covariance[row * 3U + column];
-
-      if (row == column) {
-        value += regularization;
-      }
-
-      for (std::size_t k = 0U; k < column; ++k) {
-        value -=
-          lower[row * 3U + k] *
-          lower[column * 3U + k];
-      }
-
-      if (row == column) {
-        if (!std::isfinite(value) || value <= 0.0) {
-          throw std::invalid_argument(
-                  "Regularized Gaussian covariance must be positive definite");
-        }
-
-        lower[row * 3U + column] = std::sqrt(value);
-      } else {
-        lower[row * 3U + column] =
-          value / lower[column * 3U + column];
-      }
-    }
-  }
-
-  return lower;
+  detail::Matrix3 regularized = detail::matrix3_from_row_major(covariance);
+  regularized.diagonal().array() += regularization;
+  return detail::matrix3_to_row_major(regularized);
 }
 
 [[nodiscard]] double mahalanobis_distance(
-  const Matrix3 & lower,
+  const Matrix3 & covariance,
   const std::array<double, 3> & residual)
 {
-  std::array<double, 3> whitened{};
-
-  for (std::size_t row = 0U; row < 3U; ++row) {
-    double value = residual[row];
-
-    for (std::size_t column = 0U; column < row; ++column) {
-      value -= lower[row * 3U + column] * whitened[column];
-    }
-
-    whitened[row] = value / lower[row * 3U + row];
-  }
-
-  double squared_distance = 0.0;
-  for (const double value : whitened) {
-    squared_distance += value * value;
-  }
-
-  return std::sqrt(std::max(0.0, squared_distance));
+  return std::sqrt(detail::mahalanobis_squared(
+    residual, covariance, "Regularized Gaussian covariance"));
 }
 
 }  // namespace

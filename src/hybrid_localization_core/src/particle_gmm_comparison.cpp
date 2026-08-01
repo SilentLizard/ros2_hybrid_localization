@@ -1,5 +1,6 @@
 #include "hybrid_localization_core/particle_gmm_comparison.hpp"
 
+#include "hybrid_localization_core/detail/matrix3.hpp"
 #include "hybrid_localization_core/gaussian_statistics.hpp"
 #include "hybrid_localization_core/geometry.hpp"
 #include "hybrid_localization_core/particle_statistics.hpp"
@@ -16,15 +17,12 @@ namespace hybrid_localization
 namespace
 {
 
-using Matrix3 = std::array<double, 9>;
-using Vector3 = std::array<double, 3>;
+using Matrix3 = detail::Matrix3Storage;
+using Vector3 = detail::Vector3Storage;
 
 [[nodiscard]] double determinant(const Matrix3 & matrix)
 {
-  return
-    matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) -
-    matrix[1] * (matrix[3] * matrix[8] - matrix[5] * matrix[6]) +
-    matrix[2] * (matrix[3] * matrix[7] - matrix[4] * matrix[6]);
+  return detail::determinant(matrix);
 }
 
 void validate_covariance(
@@ -32,37 +30,7 @@ void validate_covariance(
   const double symmetry_tolerance,
   const double psd_tolerance)
 {
-  for (const double value : covariance) {
-    if (!std::isfinite(value)) {
-      throw std::invalid_argument("Covariance entries must be finite");
-    }
-  }
-
-  if (std::abs(covariance[1] - covariance[3]) > symmetry_tolerance ||
-      std::abs(covariance[2] - covariance[6]) > symmetry_tolerance ||
-      std::abs(covariance[5] - covariance[7]) > symmetry_tolerance)
-  {
-    throw std::invalid_argument("Covariance must be symmetric");
-  }
-
-  if (covariance[0] < -psd_tolerance ||
-      covariance[4] < -psd_tolerance ||
-      covariance[8] < -psd_tolerance)
-  {
-    throw std::invalid_argument("Covariance diagonal must be nonnegative");
-  }
-
-  const double minor_xy = covariance[0] * covariance[4] - covariance[1] * covariance[3];
-  const double minor_x_yaw = covariance[0] * covariance[8] - covariance[2] * covariance[6];
-  const double minor_y_yaw = covariance[4] * covariance[8] - covariance[5] * covariance[7];
-
-  if (minor_xy < -psd_tolerance ||
-      minor_x_yaw < -psd_tolerance ||
-      minor_y_yaw < -psd_tolerance ||
-      determinant(covariance) < -psd_tolerance)
-  {
-    throw std::invalid_argument("Covariance must be positive semidefinite");
-  }
+  detail::validate_covariance(covariance, symmetry_tolerance, psd_tolerance, "Covariance");
 }
 
 [[nodiscard]] Matrix3 add_regularized(
@@ -70,43 +38,17 @@ void validate_covariance(
   const Matrix3 & rhs,
   const double regularization)
 {
-  Matrix3 result{};
-  for (std::size_t index = 0; index < result.size(); ++index) {
-    result[index] = lhs[index] + rhs[index];
-  }
-  result[0] += regularization;
-  result[4] += regularization;
-  result[8] += regularization;
-  return result;
+  detail::Matrix3 result =
+    detail::matrix3_from_row_major(lhs) + detail::matrix3_from_row_major(rhs);
+  result.diagonal().array() += regularization;
+  return detail::matrix3_to_row_major(result);
 }
 
 [[nodiscard]] Vector3 solve_3x3(
   const Matrix3 & matrix,
   const Vector3 & rhs)
 {
-  const double det = determinant(matrix);
-  if (!std::isfinite(det) || det <= 0.0) {
-    throw std::domain_error("Regularized covariance is not invertible");
-  }
-
-  Matrix3 inverse{};
-  inverse[0] = (matrix[4] * matrix[8] - matrix[5] * matrix[7]) / det;
-  inverse[1] = (matrix[2] * matrix[7] - matrix[1] * matrix[8]) / det;
-  inverse[2] = (matrix[1] * matrix[5] - matrix[2] * matrix[4]) / det;
-  inverse[3] = (matrix[5] * matrix[6] - matrix[3] * matrix[8]) / det;
-  inverse[4] = (matrix[0] * matrix[8] - matrix[2] * matrix[6]) / det;
-  inverse[5] = (matrix[2] * matrix[3] - matrix[0] * matrix[5]) / det;
-  inverse[6] = (matrix[3] * matrix[7] - matrix[4] * matrix[6]) / det;
-  inverse[7] = (matrix[1] * matrix[6] - matrix[0] * matrix[7]) / det;
-  inverse[8] = (matrix[0] * matrix[4] - matrix[1] * matrix[3]) / det;
-
-  Vector3 result{};
-  for (std::size_t row = 0; row < 3; ++row) {
-    for (std::size_t column = 0; column < 3; ++column) {
-      result[row] += inverse[row * 3 + column] * rhs[column];
-    }
-  }
-  return result;
+  return detail::solve_positive_definite(matrix, rhs, "Regularized covariance");
 }
 
 [[nodiscard]] double mahalanobis_squared(
