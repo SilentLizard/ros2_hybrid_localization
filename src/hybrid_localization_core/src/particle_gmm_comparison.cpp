@@ -20,10 +20,6 @@ namespace
 using Matrix3 = detail::Matrix3Storage;
 using Vector3 = detail::Vector3Storage;
 
-[[nodiscard]] double determinant(const Matrix3 & matrix)
-{
-  return detail::determinant(matrix);
-}
 
 void validate_covariance(
   const Matrix3 & covariance,

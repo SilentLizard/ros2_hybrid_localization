@@ -178,12 +178,12 @@ TEST(LocalizationEvidencePolicy, RejectsInvalidThresholdOrderingAndInputs)
 
   hl::LocalizationEvidencePolicyInput invalid_time;
   invalid_time.timestamp_seconds = std::numeric_limits<double>::quiet_NaN();
-  EXPECT_THROW(hl::build_transition_evidence(invalid_time), std::invalid_argument);
+  EXPECT_THROW((void)hl::build_transition_evidence(invalid_time), std::invalid_argument);
 
   hl::LocalizationEvidencePolicyInput invalid_particle;
   invalid_particle.particle_metrics =
     hl::ParticleBeliefMetrics{10U, 1U, 0.7, 0.1, 0.6};
-  EXPECT_THROW(hl::build_transition_evidence(invalid_particle), std::invalid_argument);
+  EXPECT_THROW((void)hl::build_transition_evidence(invalid_particle), std::invalid_argument);
 
   const std::vector<hl::WeightedParticle> particles{
     {{0.0, 0.0, 0.0}, 0.5},
@@ -191,6 +191,6 @@ TEST(LocalizationEvidencePolicy, RejectsInvalidThresholdOrderingAndInputs)
   hl::ParticleClusteringResult incomplete;
   incomplete.clusters = {{{0U}, 0.5}};
   EXPECT_THROW(
-    hl::summarize_particle_belief(particles, incomplete),
+    (void)hl::summarize_particle_belief(particles, incomplete),
     std::invalid_argument);
 }

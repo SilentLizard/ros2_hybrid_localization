@@ -1,0 +1,31 @@
+# Raw localization-health metrics. This message does not apply policy thresholds.
+
+std_msgs/Header header
+uint64 update_sequence
+
+uint64 component_count
+float64 represented_weight
+float64 discarded_weight
+float64 dominant_component_weight
+float64 normalized_mixture_entropy
+float64 effective_component_count
+
+float64 weighted_position_variance
+float64 weighted_yaw_variance
+float64 maximum_position_variance
+float64 maximum_yaw_variance
+
+bool has_measurement_update
+float64 accepted_component_fraction
+float64 accepted_component_weight_fraction
+float64 weighted_mahalanobis_distance_squared
+float64 maximum_mahalanobis_distance_squared
+float64 normalization_evidence
+
+bool has_fit_quality
+float64 weighted_fit_mean_mahalanobis_distance
+float64 maximum_fit_mahalanobis_distance
+float64 minimum_angular_resultant_length
+
+bool has_recovery_failure_score
+float64 recovery_failure_score
