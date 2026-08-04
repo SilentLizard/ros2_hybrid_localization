@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <vector>
 
 #include "hybrid_localization_core/gaussian_mixture.hpp"
 
@@ -29,6 +30,7 @@ struct GaussianMixtureManagementResult
   std::size_t pruned_component_count{0U};
   double pruned_weight{0.0};
   double normalization_scale{1.0};
+  std::vector<HypothesisId> pruned_hypothesis_ids{};
 };
 
 /// Normalize, sort, and prune a Gaussian mixture.

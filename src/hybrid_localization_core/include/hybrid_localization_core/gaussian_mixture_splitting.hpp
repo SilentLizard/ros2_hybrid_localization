@@ -60,6 +60,7 @@ struct GaussianMixtureSplittingResult
 
   /// Original component indices that were split, in input component order.
   std::vector<std::size_t> split_component_indices{};
+  std::vector<HypothesisId> created_hypothesis_ids{};
 };
 
 /// Split poor-fit Gaussian components using their source particles.
@@ -75,6 +76,15 @@ split_gaussian_mixture_components(
   std::span<const WeightedParticle> particles,
   const GaussianMixture & mixture,
   std::span<const GaussianComponentSplitEvidence> evidence,
+  const GaussianMixtureSplittingConfig & config = {});
+
+/// Split while allocating stable IDs for generated child hypotheses.
+[[nodiscard]] GaussianMixtureSplittingResult
+split_gaussian_mixture_components(
+  std::span<const WeightedParticle> particles,
+  const GaussianMixture & mixture,
+  std::span<const GaussianComponentSplitEvidence> evidence,
+  HypothesisIdGenerator & id_generator,
   const GaussianMixtureSplittingConfig & config = {});
 
 }  // namespace hybrid_localization

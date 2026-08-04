@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <vector>
 
 #include "hybrid_localization_core/gaussian_mixture.hpp"
 
@@ -33,6 +34,7 @@ struct GaussianMixtureMergingResult
 {
   GaussianMixture mixture{};
   std::size_t merge_count{0U};
+  std::vector<HypothesisId> created_hypothesis_ids{};
 };
 
 /// Merge compatible Gaussian components while preserving probability mass and
@@ -49,6 +51,12 @@ struct GaussianMixtureMergingResult
 /// within mass_tolerance.
 [[nodiscard]] GaussianMixtureMergingResult merge_gaussian_mixture_components(
   const GaussianMixture & mixture,
+  const GaussianMixtureMergingConfig & config = {});
+
+/// Merge while allocating stable IDs for newly created hypotheses.
+[[nodiscard]] GaussianMixtureMergingResult merge_gaussian_mixture_components(
+  const GaussianMixture & mixture,
+  HypothesisIdGenerator & id_generator,
   const GaussianMixtureMergingConfig & config = {});
 
 }  // namespace hybrid_localization

@@ -158,7 +158,8 @@ void validate_mixture(
 
 [[nodiscard]] GaussianComponent merge_pair(
   const GaussianComponent & lhs,
-  const GaussianComponent & rhs)
+  const GaussianComponent & rhs,
+  HypothesisIdGenerator & id_generator)
 {
   const double merged_weight = lhs.weight + rhs.weight;
   const double lhs_fraction = lhs.weight / merged_weight;
@@ -173,6 +174,8 @@ void validate_mixture(
   GaussianComponent merged;
   merged.weight = merged_weight;
   merged.sample_count = lhs.sample_count + rhs.sample_count;
+  merged.provenance = make_merged_provenance(
+    id_generator, lhs.provenance, rhs.provenance);
   merged.mean.x = lhs_fraction * lhs.mean.x + rhs_fraction * rhs.mean.x;
   merged.mean.y = lhs_fraction * lhs.mean.y + rhs_fraction * rhs.mean.y;
 
@@ -246,6 +249,7 @@ struct MergeCandidate
 
 GaussianMixtureMergingResult merge_gaussian_mixture_components(
   const GaussianMixture & mixture,
+  HypothesisIdGenerator & id_generator,
   const GaussianMixtureMergingConfig & config)
 {
   validate_config(config);
@@ -263,7 +267,9 @@ GaussianMixtureMergingResult merge_gaussian_mixture_components(
 
     GaussianComponent merged = merge_pair(
       result.mixture.components[candidate.first],
-      result.mixture.components[candidate.second]);
+      result.mixture.components[candidate.second],
+      id_generator);
+    result.created_hypothesis_ids.push_back(merged.provenance.id);
 
     result.mixture.components[candidate.first] = std::move(merged);
     result.mixture.components.erase(
@@ -295,6 +301,20 @@ GaussianMixtureMergingResult merge_gaussian_mixture_components(
   }
 
   return result;
+}
+
+GaussianMixtureMergingResult merge_gaussian_mixture_components(
+  const GaussianMixture & mixture,
+  const GaussianMixtureMergingConfig & config)
+{
+  HypothesisId next_id = 1U;
+  for (const auto & component : mixture.components) {
+    if (has_hypothesis_id(component.provenance)) {
+      next_id = std::max(next_id, component.provenance.id + 1U);
+    }
+  }
+  HypothesisIdGenerator id_generator(next_id);
+  return merge_gaussian_mixture_components(mixture, id_generator, config);
 }
 
 }  // namespace hybrid_localization

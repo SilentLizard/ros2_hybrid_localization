@@ -97,6 +97,9 @@ GaussianMixtureManagementResult manage_gaussian_mixture(
 
     if (below_threshold || exceeds_count) {
       result.pruned_weight += component.weight;
+      if (has_hypothesis_id(component.provenance)) {
+        result.pruned_hypothesis_ids.push_back(component.provenance.id);
+      }
       ++result.pruned_component_count;
       continue;
     }

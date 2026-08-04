@@ -3,6 +3,7 @@
 #include <span>
 #include <vector>
 
+#include "hybrid_localization_core/hypothesis_provenance.hpp"
 #include "hybrid_localization_core/particle_clustering.hpp"
 #include "hybrid_localization_core/types.hpp"
 
@@ -42,5 +43,11 @@ struct GaussianMixture
 [[nodiscard]] GaussianMixture fit_gaussian_mixture(
   std::span<const WeightedParticle> particles,
   const ParticleClusteringResult & clustering);
+
+/// Convert clusters while allocating stable component IDs from generator.
+[[nodiscard]] GaussianMixture fit_gaussian_mixture(
+  std::span<const WeightedParticle> particles,
+  const ParticleClusteringResult & clustering,
+  HypothesisIdGenerator & id_generator);
 
 }  // namespace hybrid_localization

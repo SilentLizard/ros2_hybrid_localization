@@ -12,10 +12,13 @@
 
 namespace hybrid_localization
 {
+namespace
+{
 
-GaussianMixture fit_gaussian_mixture(
+GaussianMixture fit_gaussian_mixture_impl(
   const std::span<const WeightedParticle> particles,
-  const ParticleClusteringResult & clustering)
+  const ParticleClusteringResult & clustering,
+  HypothesisIdGenerator & id_generator)
 {
   /*
    * This validates the particles and gives us one authoritative normalized
@@ -50,10 +53,11 @@ GaussianMixture fit_gaussian_mixture(
       retained[index] = true;
     }
 
-    mixture.components.push_back(
-      fit_gaussian(
-        normalized,
-        cluster.particle_indices));
+    auto component = fit_gaussian(
+      normalized,
+      cluster.particle_indices);
+    component.provenance = make_root_provenance(id_generator);
+    mixture.components.push_back(std::move(component));
   }
 
   /*
@@ -103,6 +107,24 @@ GaussianMixture fit_gaussian_mixture(
   }
 
   return mixture;
+}
+
+}  // namespace
+
+GaussianMixture fit_gaussian_mixture(
+  const std::span<const WeightedParticle> particles,
+  const ParticleClusteringResult & clustering)
+{
+  HypothesisIdGenerator id_generator;
+  return fit_gaussian_mixture_impl(particles, clustering, id_generator);
+}
+
+GaussianMixture fit_gaussian_mixture(
+  const std::span<const WeightedParticle> particles,
+  const ParticleClusteringResult & clustering,
+  HypothesisIdGenerator & id_generator)
+{
+  return fit_gaussian_mixture_impl(particles, clustering, id_generator);
 }
 
 }  // namespace hybrid_localization

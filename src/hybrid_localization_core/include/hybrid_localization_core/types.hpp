@@ -3,6 +3,8 @@
 #include <array>
 #include <cstddef>
 
+#include "hybrid_localization_core/hypothesis_provenance.hpp"
+
 namespace hybrid_localization
 {
 
@@ -30,6 +32,7 @@ struct GaussianComponent
   std::array<double, 9> covariance{};
   double weight{0.0};
   std::size_t sample_count{0};
+  HypothesisProvenance provenance{};
 };
 
 }  // namespace hybrid_localization

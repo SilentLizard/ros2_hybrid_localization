@@ -277,6 +277,7 @@ partition_source_particles(
   const std::span<const WeightedParticle> normalized_particles,
   const GaussianComponent & parent,
   const GaussianComponentSplitEvidence & evidence,
+  HypothesisIdGenerator & id_generator,
   const GaussianMixtureSplittingConfig & config)
 {
   const auto [left_indices, right_indices] = partition_source_particles(
@@ -293,6 +294,8 @@ partition_source_particles(
   const double scale = parent.weight / source_mass;
   left.weight *= scale;
   right.weight = parent.weight - left.weight;
+  left.provenance = make_split_provenance(id_generator, parent.provenance);
+  right.provenance = make_split_provenance(id_generator, parent.provenance);
 
   return {std::move(left), std::move(right)};
 }
@@ -303,6 +306,7 @@ GaussianMixtureSplittingResult split_gaussian_mixture_components(
   const std::span<const WeightedParticle> particles,
   const GaussianMixture & mixture,
   const std::span<const GaussianComponentSplitEvidence> evidence,
+  HypothesisIdGenerator & id_generator,
   const GaussianMixtureSplittingConfig & config)
 {
   validate_config(config);
@@ -339,7 +343,9 @@ GaussianMixtureSplittingResult split_gaussian_mixture_components(
     }
 
     const auto [left, right] = split_component(
-      normalized_particles, component, component_evidence, config);
+      normalized_particles, component, component_evidence, id_generator, config);
+    result.created_hypothesis_ids.push_back(left.provenance.id);
+    result.created_hypothesis_ids.push_back(right.provenance.id);
     result.mixture.components.push_back(left);
     result.mixture.components.push_back(right);
     result.split_component_indices.push_back(component_index);
@@ -361,6 +367,23 @@ GaussianMixtureSplittingResult split_gaussian_mixture_components(
   }
 
   return result;
+}
+
+GaussianMixtureSplittingResult split_gaussian_mixture_components(
+  const std::span<const WeightedParticle> particles,
+  const GaussianMixture & mixture,
+  const std::span<const GaussianComponentSplitEvidence> evidence,
+  const GaussianMixtureSplittingConfig & config)
+{
+  HypothesisId next_id = 1U;
+  for (const auto & component : mixture.components) {
+    if (has_hypothesis_id(component.provenance)) {
+      next_id = std::max(next_id, component.provenance.id + 1U);
+    }
+  }
+  HypothesisIdGenerator id_generator(next_id);
+  return split_gaussian_mixture_components(
+    particles, mixture, evidence, id_generator, config);
 }
 
 }  // namespace hybrid_localization

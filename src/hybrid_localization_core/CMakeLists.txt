@@ -26,6 +26,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/gaussian_statistics.cpp
   src/geometry.cpp
   src/global_particle_sampling.cpp
+  src/hypothesis_provenance.cpp
   src/localization_health.cpp
   src/particle_clustering.cpp
   src/particle_gmm_comparison.cpp
@@ -159,6 +160,13 @@ if(BUILD_TESTING)
     test/test_global_particle_sampling.cpp
   )
   target_link_libraries(test_global_particle_sampling
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_hypothesis_provenance
+    test/test_hypothesis_provenance.cpp
+  )
+  target_link_libraries(test_hypothesis_provenance
     ${PROJECT_NAME}
   )
 
