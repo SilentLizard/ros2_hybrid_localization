@@ -28,6 +28,7 @@ set(HYBRID_LOCALIZATION_CORE_SOURCES
   src/geometry.cpp
   src/global_particle_sampling.cpp
   src/hypothesis_provenance.cpp
+  src/localization_evidence_policy.cpp
   src/localization_health.cpp
   src/particle_clustering.cpp
   src/particle_gmm_comparison.cpp
@@ -175,6 +176,13 @@ if(BUILD_TESTING)
     test/test_hypothesis_provenance.cpp
   )
   target_link_libraries(test_hypothesis_provenance
+    ${PROJECT_NAME}
+  )
+
+  ament_add_gtest(test_localization_evidence_policy
+    test/test_localization_evidence_policy.cpp
+  )
+  target_link_libraries(test_localization_evidence_policy
     ${PROJECT_NAME}
   )
 
