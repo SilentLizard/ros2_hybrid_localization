@@ -16,11 +16,13 @@ find_package(nav2_msgs REQUIRED)
 find_package(rcl_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 add_library(${PROJECT_NAME}
   src/amcl_particle_cloud_adapter.cpp
   src/particle_analysis_processor.cpp
   src/particle_analysis_parameters.cpp
+  src/particle_analysis_markers.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -37,6 +39,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rcl_interfaces
   rclcpp
   std_msgs
+  visualization_msgs
 )
 
 target_compile_options(${PROJECT_NAME}
@@ -74,11 +77,26 @@ ament_target_dependencies(particle_analysis_observer
   rclcpp
 )
 
+add_executable(particle_analysis_visualization
+  src/particle_analysis_visualization_node.cpp
+)
+
+target_link_libraries(particle_analysis_visualization
+  ${PROJECT_NAME}
+)
+
+ament_target_dependencies(particle_analysis_visualization
+  hybrid_localization_msgs
+  rclcpp
+  visualization_msgs
+)
+
 install(
   TARGETS
     ${PROJECT_NAME}
     amcl_particle_cloud_adapter_smoke
     particle_analysis_observer
+    particle_analysis_visualization
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -95,6 +113,11 @@ install(
   DESTINATION share/${PROJECT_NAME}/config
 )
 
+install(
+  DIRECTORY rviz/
+  DESTINATION share/${PROJECT_NAME}/rviz
+)
+
 ament_export_targets(
   export_${PROJECT_NAME}
   HAS_LIBRARY_TARGET
@@ -109,6 +132,7 @@ ament_export_dependencies(
   rcl_interfaces
   rclcpp
   std_msgs
+  visualization_msgs
 )
 
 if(BUILD_TESTING)
@@ -150,6 +174,19 @@ if(BUILD_TESTING)
   
   ament_target_dependencies(test_particle_analysis_parameters
     rclcpp
+  )
+
+  ament_add_gtest(test_particle_analysis_markers
+    test/test_particle_analysis_markers.cpp
+  )
+  
+  target_link_libraries(test_particle_analysis_markers
+    ${PROJECT_NAME}
+  )
+  
+  ament_target_dependencies(test_particle_analysis_markers
+    hybrid_localization_msgs
+    visualization_msgs
   )
 endif()
 
