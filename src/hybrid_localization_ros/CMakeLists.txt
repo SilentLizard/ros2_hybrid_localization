@@ -13,12 +13,14 @@ find_package(geometry_msgs REQUIRED)
 find_package(hybrid_localization_core REQUIRED)
 find_package(hybrid_localization_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
+find_package(rcl_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 add_library(${PROJECT_NAME}
   src/amcl_particle_cloud_adapter.cpp
   src/particle_analysis_processor.cpp
+  src/particle_analysis_parameters.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -32,6 +34,7 @@ ament_target_dependencies(${PROJECT_NAME}
   hybrid_localization_core
   hybrid_localization_msgs
   nav2_msgs
+  rcl_interfaces
   rclcpp
   std_msgs
 )
@@ -67,6 +70,7 @@ target_link_libraries(particle_analysis_observer
 
 ament_target_dependencies(particle_analysis_observer
   hybrid_localization_msgs
+  rcl_interfaces
   rclcpp
 )
 
@@ -86,6 +90,11 @@ install(
   DESTINATION include
 )
 
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
 ament_export_targets(
   export_${PROJECT_NAME}
   HAS_LIBRARY_TARGET
@@ -97,6 +106,7 @@ ament_export_dependencies(
   hybrid_localization_core
   hybrid_localization_msgs
   nav2_msgs
+  rcl_interfaces
   rclcpp
   std_msgs
 )
@@ -128,6 +138,18 @@ if(BUILD_TESTING)
 
   ament_target_dependencies(test_particle_analysis_processor
     hybrid_localization_msgs
+  )
+
+  ament_add_gtest(test_particle_analysis_parameters
+    test/test_particle_analysis_parameters.cpp
+  )
+
+  target_link_libraries(test_particle_analysis_parameters
+    ${PROJECT_NAME}
+  )
+  
+  ament_target_dependencies(test_particle_analysis_parameters
+    rclcpp
   )
 endif()
 

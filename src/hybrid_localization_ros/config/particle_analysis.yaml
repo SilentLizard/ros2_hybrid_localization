@@ -1,0 +1,37 @@
+particle_analysis_observer:
+  ros__parameters:
+    particle_clustering:
+      position_scale: 0.25
+      yaw_scale: 0.35
+      epsilon: 1.0
+      minimum_neighbors: 5
+      minimum_core_weight: 0.0
+      minimum_cluster_weight: 0.01
+
+    health_policy:
+      particle_minimum_retained_weight: 0.80
+      particle_minimum_dominant_weight: 0.55
+      particle_maximum_noise_weight: 0.20
+      particle_maximum_retained_clusters: 3
+      gmm_minimum_available_represented_weight: 0.05
+
+      good_minimum_represented_weight: 0.80
+      good_minimum_dominant_weight: 0.45
+      good_maximum_normalized_entropy: 0.75
+      good_maximum_weighted_position_variance: 1.00
+      good_maximum_weighted_yaw_variance: 0.50
+
+      bad_maximum_represented_weight: 0.50
+      bad_maximum_dominant_weight: 0.20
+      bad_minimum_normalized_entropy: 0.95
+      bad_minimum_weighted_position_variance: 4.00
+      bad_minimum_weighted_yaw_variance: 1.50
+
+      ambiguity_entry_minimum_entropy: 0.75
+      ambiguity_exit_maximum_entropy: 0.55
+      ambiguity_entry_minimum_effective_component_count: 2.50
+      ambiguity_exit_maximum_effective_component_count: 1.75
+      ambiguity_entry_maximum_dominant_weight: 0.45
+      ambiguity_exit_minimum_dominant_weight: 0.60
+      ambiguity_component_budget_fraction: 0.90
+      maximum_component_count: 8

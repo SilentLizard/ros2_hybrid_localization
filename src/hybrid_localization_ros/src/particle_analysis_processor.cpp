@@ -221,6 +221,15 @@ ParticleAnalysisProducts ParticleAnalysisProcessor::process(
   return products;
 }
 
+void ParticleAnalysisProcessor::set_config(ParticleAnalysisProcessorConfig config)
+{
+  hybrid_localization::validate_particle_clustering_config(config.clustering);
+  hybrid_localization::validate_localization_evidence_policy_config(
+    config.evidence_policy);
+
+  config_ = std::move(config);
+}
+
 std::uint64_t ParticleAnalysisProcessor::analysis_sequence() const noexcept
 {
   return analysis_sequence_;

@@ -53,6 +53,9 @@ public:
 
   [[nodiscard]] ParticleAnalysisProducts process(
     const AdaptedParticleCloud & cloud);
+  /// Replace the validated runtime configuration without resetting analysis
+  /// sequence state or hypothesis-ID allocation.
+  void set_config(ParticleAnalysisProcessorConfig config);
 
   [[nodiscard]] std::uint64_t analysis_sequence() const noexcept;
   [[nodiscard]] const ParticleAnalysisProcessorConfig & config() const noexcept;

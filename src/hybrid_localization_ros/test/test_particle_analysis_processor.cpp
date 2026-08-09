@@ -152,3 +152,31 @@ TEST(ParticleAnalysisProcessor, ValidatesConfigurationAtConstruction)
 
   EXPECT_THROW((void)hlr::ParticleAnalysisProcessor{config}, std::invalid_argument);
 }
+
+TEST(ParticleAnalysisProcessor, ReconfiguresWithoutResettingSequence)
+{
+  hlr::ParticleAnalysisProcessor processor;
+  const auto first = processor.process(two_cluster_cloud());
+  ASSERT_EQ(first.analysis.analysis_sequence, 1U);
+  
+  auto config = processor.config();
+  config.clustering.epsilon = 0.8;
+  processor.set_config(config);
+  
+  EXPECT_DOUBLE_EQ(processor.config().clustering.epsilon, 0.8);
+  EXPECT_EQ(processor.analysis_sequence(), 1U);
+  
+  const auto second = processor.process(two_cluster_cloud());
+  EXPECT_EQ(second.analysis.analysis_sequence, 2U);
+}
+
+TEST(ParticleAnalysisProcessor, RejectsInvalidReconfigurationWithoutChangingState)
+{
+  hlr::ParticleAnalysisProcessor processor;
+  auto config = processor.config();
+  config.clustering.position_scale = 0.0;
+  
+  EXPECT_THROW(processor.set_config(config), std::invalid_argument);
+  EXPECT_DOUBLE_EQ(processor.config().clustering.position_scale, 0.25);
+  EXPECT_EQ(processor.analysis_sequence(), 0U);
+}
