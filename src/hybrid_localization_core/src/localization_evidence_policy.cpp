@@ -13,6 +13,8 @@ namespace hybrid_localization
 namespace
 {
 
+constexpr double kProbabilityTolerance = 1e-9;
+
 void require_finite(const double value, const char * name)
 {
   if (!std::isfinite(value)) {
@@ -25,6 +27,15 @@ void require_unit_interval(const double value, const char * name)
   require_finite(value, name);
   if (value < 0.0 || value > 1.0) {
     throw std::invalid_argument(std::string(name) + " must lie in [0, 1]");
+  }
+}
+
+void require_probability_metric(const double value, const char * name)
+{
+  require_finite(value, name);
+  if (value < -kProbabilityTolerance || value > 1.0 + kProbabilityTolerance) {
+    throw std::invalid_argument(
+      std::string(name) + " must lie in [0, 1] within tolerance");
   }
 }
 
@@ -66,9 +77,9 @@ void require_at_most(
 void validate_particle_metrics(const ParticleBeliefMetrics & metrics)
 {
   require_positive_count(metrics.particle_count, "particle_count");
-  require_unit_interval(metrics.retained_cluster_weight, "retained_cluster_weight");
-  require_unit_interval(metrics.noise_weight, "noise_weight");
-  require_unit_interval(metrics.dominant_cluster_weight, "dominant_cluster_weight");
+  require_probability_metric(metrics.retained_cluster_weight, "retained_cluster_weight");
+  require_probability_metric(metrics.noise_weight, "noise_weight");
+  require_probability_metric(metrics.dominant_cluster_weight, "dominant_cluster_weight");
 
   if (metrics.retained_cluster_count > metrics.particle_count) {
     throw std::invalid_argument("retained_cluster_count cannot exceed particle_count");
@@ -79,7 +90,9 @@ void validate_particle_metrics(const ParticleBeliefMetrics & metrics)
   if (metrics.retained_cluster_count > 0U && metrics.dominant_cluster_weight <= 0.0) {
     throw std::invalid_argument("retained clusters require positive dominant weight");
   }
-  if (metrics.dominant_cluster_weight > metrics.retained_cluster_weight) {
+  if (metrics.dominant_cluster_weight >
+      metrics.retained_cluster_weight + kProbabilityTolerance)
+  {
     throw std::invalid_argument("dominant cluster weight cannot exceed retained weight");
   }
   if (std::abs(metrics.retained_cluster_weight + metrics.noise_weight - 1.0) > 1e-9) {
@@ -89,10 +102,10 @@ void validate_particle_metrics(const ParticleBeliefMetrics & metrics)
 
 void validate_health_metrics(const LocalizationHealthMetrics & metrics)
 {
-  require_unit_interval(metrics.represented_weight, "represented_weight");
-  require_unit_interval(metrics.discarded_weight, "discarded_weight");
-  require_unit_interval(metrics.dominant_component_weight, "dominant_component_weight");
-  require_unit_interval(metrics.normalized_mixture_entropy, "normalized_mixture_entropy");
+  require_probability_metric(metrics.represented_weight, "represented_weight");
+  require_probability_metric(metrics.discarded_weight, "discarded_weight");
+  require_probability_metric(metrics.dominant_component_weight, "dominant_component_weight");
+  require_probability_metric(metrics.normalized_mixture_entropy, "normalized_mixture_entropy");
   require_nonnegative(metrics.effective_component_count, "effective_component_count");
   require_nonnegative(metrics.weighted_position_variance, "weighted_position_variance");
   require_nonnegative(metrics.weighted_yaw_variance, "weighted_yaw_variance");
@@ -108,7 +121,7 @@ void validate_health_metrics(const LocalizationHealthMetrics & metrics)
   }
 
   if (metrics.has_measurement_update) {
-    require_unit_interval(
+    require_probability_metric(
       metrics.accepted_component_weight_fraction,
       "accepted_component_weight_fraction");
     require_nonnegative(

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <limits>
+#include <numeric>
 #include <numbers>
 #include <stdexcept>
 #include <vector>
@@ -32,6 +33,33 @@ TEST(ParticleStatistics, NormalizesWeights)
     normalized[2].weight;
 
   EXPECT_NEAR(total, 1.0, 1e-12);
+}
+
+TEST(ParticleStatistics, NormalizedWeightsSumExactlyToOneAfterFloatingPointDivision)
+{
+  std::vector<hl::WeightedParticle> particles;
+  particles.reserve(501U);
+
+  for (std::size_t index = 0U; index < 501U; ++index) {
+    particles.push_back({{static_cast<double>(index), 0.0, 0.0}, 1.0 / 501.0});
+  }
+
+  const auto normalized = hl::normalize_weights(particles);
+
+  const double total = std::accumulate(
+    normalized.begin(),
+    normalized.end(),
+    0.0,
+    [](const double sum, const hl::WeightedParticle & particle) {
+      return sum + particle.weight;
+    });
+
+  EXPECT_DOUBLE_EQ(total, 1.0);
+
+  for (const auto & particle : normalized) {
+    EXPECT_GE(particle.weight, 0.0);
+    EXPECT_LE(particle.weight, 1.0);
+  }
 }
 
 TEST(ParticleStatistics, DoesNotModifyOriginalWeights)

@@ -11,12 +11,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(hybrid_localization_core REQUIRED)
+find_package(hybrid_localization_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 add_library(${PROJECT_NAME}
   src/amcl_particle_cloud_adapter.cpp
+  src/particle_analysis_processor.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -28,6 +30,7 @@ target_include_directories(${PROJECT_NAME}
 ament_target_dependencies(${PROJECT_NAME}
   geometry_msgs
   hybrid_localization_core
+  hybrid_localization_msgs
   nav2_msgs
   rclcpp
   std_msgs
@@ -54,10 +57,24 @@ ament_target_dependencies(amcl_particle_cloud_adapter_smoke
   rclcpp
 )
 
+add_executable(particle_analysis_observer
+  src/particle_analysis_node.cpp
+)
+
+target_link_libraries(particle_analysis_observer
+  ${PROJECT_NAME}
+)
+
+ament_target_dependencies(particle_analysis_observer
+  hybrid_localization_msgs
+  rclcpp
+)
+
 install(
   TARGETS
     ${PROJECT_NAME}
     amcl_particle_cloud_adapter_smoke
+    particle_analysis_observer
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -78,6 +95,7 @@ ament_export_include_directories(include)
 ament_export_dependencies(
   geometry_msgs
   hybrid_localization_core
+  hybrid_localization_msgs
   nav2_msgs
   rclcpp
   std_msgs
@@ -98,6 +116,18 @@ if(BUILD_TESTING)
     geometry_msgs
     nav2_msgs
     rclcpp
+  )
+  
+  ament_add_gtest(test_particle_analysis_processor
+    test/test_particle_analysis_processor.cpp
+  )
+
+  target_link_libraries(test_particle_analysis_processor
+    ${PROJECT_NAME}
+  )
+
+  ament_target_dependencies(test_particle_analysis_processor
+    hybrid_localization_msgs
   )
 endif()
 

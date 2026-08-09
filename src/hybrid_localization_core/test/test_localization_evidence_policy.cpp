@@ -167,6 +167,36 @@ TEST(LocalizationEvidencePolicy, DeclaresUnavailableEmptyGmmEmergency)
   EXPECT_TRUE(evidence.emergency_global_recovery);
 }
 
+TEST(LocalizationEvidencePolicy, AcceptsProbabilityRoundoffButRejectsMaterialOverflow)
+{
+  constexpr double tiny_roundoff = 5e-12;
+
+  hl::LocalizationEvidencePolicyInput tolerated;
+  tolerated.particle_metrics =
+    hl::ParticleBeliefMetrics{
+      500U, 1U, 1.0 + tiny_roundoff, 0.0, 1.0 + tiny_roundoff};
+
+  auto health = healthy_gmm();
+  health.represented_weight = 1.0;
+  health.discarded_weight = 0.0;
+  health.dominant_component_weight = 1.0 + tiny_roundoff;
+  tolerated.gmm_health = health;
+
+  EXPECT_NO_THROW((void)hl::build_transition_evidence(tolerated));
+
+  auto invalid_particle = tolerated;
+  invalid_particle.particle_metrics->retained_cluster_weight = 1.0 + 1e-6;
+  EXPECT_THROW(
+    (void)hl::build_transition_evidence(invalid_particle),
+    std::invalid_argument);
+
+  auto invalid_health = tolerated;
+  invalid_health.gmm_health->dominant_component_weight = 1.0 + 1e-6;
+  EXPECT_THROW(
+    (void)hl::build_transition_evidence(invalid_health),
+    std::invalid_argument);
+}
+
 TEST(LocalizationEvidencePolicy, RejectsInvalidThresholdOrderingAndInputs)
 {
   hl::LocalizationEvidencePolicyConfig invalid;

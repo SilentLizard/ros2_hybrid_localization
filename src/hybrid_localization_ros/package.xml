@@ -11,6 +11,7 @@
 
   <depend>geometry_msgs</depend>
   <depend>hybrid_localization_core</depend>
+  <depend>hybrid_localization_msgs</depend>
   <depend>nav2_msgs</depend>
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>

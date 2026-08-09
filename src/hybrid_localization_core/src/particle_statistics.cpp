@@ -80,6 +80,42 @@ std::vector<WeightedParticle> normalize_weights(
       return result;
     });
 
+  /*
+   * Independent floating-point divisions followed by another accumulation can
+   * leave the normalized set a few ulps above or below exactly one. Downstream
+   * probability metrics are specified on [0, 1], so make the normalization
+   * invariant exact by applying the residual to the largest weight.
+   *
+   * Adjusting the largest entry minimizes the relative perturbation and avoids
+   * turning an originally zero-weight particle into a tiny nonzero particle.
+   */
+  const double normalized_sum = std::accumulate(
+    normalized.begin(),
+    normalized.end(),
+    0.0,
+    [](const double sum, const WeightedParticle & particle) {
+      return sum + particle.weight;
+    });
+
+  const double residual = 1.0 - normalized_sum;
+  if (residual != 0.0) {
+    const auto largest = std::max_element(
+      normalized.begin(),
+      normalized.end(),
+      [](const WeightedParticle & lhs, const WeightedParticle & rhs) {
+        return lhs.weight < rhs.weight;
+      });
+
+    largest->weight += residual;
+
+    if (!std::isfinite(largest->weight) || largest->weight < 0.0 ||
+        largest->weight > 1.0)
+    {
+      throw std::runtime_error(
+        "Normalized particle weights could not be made numerically consistent");
+    }
+  }
+
   return normalized;
 }
 
