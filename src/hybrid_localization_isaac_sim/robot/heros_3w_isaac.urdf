@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="innok_heros_3w_isaac_stable">
+  <!--
+    Isaac Sim velocity-drive tuning:
+      rear wheel joint stiffness should import as 0;
+      rear wheel damping is set to 1000.0 so velocity targets from
+      IsaacArticulationController generate wheel torque.
+  -->
+
+  <material name="body_white">
+    <color rgba="0.82 0.82 0.82 1" />
+  </material>
+  <material name="wheel_dark">
+    <color rgba="0.20 0.20 0.20 1" />
+  </material>
+
+  
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.29306256 -0.00124032 -0.08471962" rpy="0 0 0" />
+      <mass value="22.22" />
+      <inertia ixx="0.69205277" ixy="-0.00421840" ixz="-0.14575867" iyy="1.39299424" iyz="-0.00159243" izz="1.57801642" />
+    </inertial>
+
+    
+    <visual name="beam_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/beam.STL" />
+      </geometry>
+      <material name="body_white" />
+    </visual>
+
+    
+    <visual name="drive_box_visual">
+      <origin xyz="0.018 0 -0.0065" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/drive_box.STL" />
+      </geometry>
+      <material name="body_white" />
+    </visual>
+    <collision name="drive_box_collision">
+      <origin xyz="0.160 0 -0.1305" rpy="0 0 0" />
+      <geometry>
+        <box size="0.284 0.328 0.248" />
+      </geometry>
+    </collision>
+
+    
+    <visual name="caster_top_visual">
+      <origin xyz="0.637 0 -0.006" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/caster_top.STL" />
+      </geometry>
+      <material name="body_white" />
+    </visual>
+    <collision name="caster_top_collision">
+      <origin xyz="0.717 0 -0.031" rpy="0 0 0" />
+      <geometry>
+        <box size="0.160 0.160 0.05" />
+      </geometry>
+    </collision>
+
+    
+    <visual name="battery_box_visual">
+      <origin xyz="0.336 0 -0.007" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/battery_box.STL" />
+      </geometry>
+      <material name="body_white" />
+    </visual>
+    <collision name="battery_box_collision">
+      <origin xyz="0.398 0 -0.131" rpy="0 0 0" />
+      <geometry>
+        <box size="0.124 0.328 0.248" />
+      </geometry>
+    </collision>
+
+    
+    <visual name="mounting_plate_visual">
+      <origin xyz="-0.02 0 0.05" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/mounting_plate_3w.STL" />
+      </geometry>
+      <material name="body_white" />
+    </visual>
+    <collision name="mounting_plate_collision">
+      <origin xyz="0.44 0 0.048" rpy="0 0 0" />
+      <geometry>
+        <box size="0.92 0.72 0.004" />
+      </geometry>
+    </collision>
+  </link>
+
+  
+  <link name="wheel_rear_left">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="5.4" />
+      <inertia ixx="0.046" ixy="0" ixz="0" iyy="0.072" iyz="0" izz="0.045" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/wheel.STL" />
+      </geometry>
+      <material name="wheel_dark" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 0" />
+      <geometry>
+        <cylinder radius="0.16" length="0.16" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="joint_base_wheel_rear_left" type="continuous">
+    <parent link="base_link" />
+    <child link="wheel_rear_left" />
+    <origin xyz="0.081 0.277 -0.1905" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="130" velocity="12.0" />
+    <dynamics damping="1000.0" friction="0.0" />
+  </joint>
+
+  
+  <link name="wheel_rear_right">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="5.4" />
+      <inertia ixx="0.046" ixy="0" ixz="0" iyy="0.072" iyz="0" izz="0.045" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/wheel.STL" />
+      </geometry>
+      <material name="wheel_dark" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 0" />
+      <geometry>
+        <cylinder radius="0.16" length="0.16" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="joint_base_wheel_rear_right" type="continuous">
+    <parent link="base_link" />
+    <child link="wheel_rear_right" />
+    <origin xyz="0.081 -0.277 -0.1905" rpy="0 0 3.14159265359" />
+    <axis xyz="0 -1 0" />
+    <limit effort="130" velocity="12.0" />
+    <dynamics damping="1000.0" friction="0.0" />
+  </joint>
+
+  
+  <link name="caster_bot">
+    <inertial>
+      <origin xyz="-0.023 0 -0.062" rpy="0 0 0" />
+      <mass value="2.9" />
+      <inertia ixx="0.016" ixy="0" ixz="0.005" iyy="0.016" iyz="0" izz="0.010" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/caster_bot.STL" />
+      </geometry>
+      <material name="body_white" />
+    </visual>
+    
+  </link>
+
+  <joint name="caster_bot_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="caster_bot" />
+    <origin xyz="0.720 0 -0.041" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <dynamics damping="0.08" friction="0.02" />
+  </joint>
+
+  <link name="caster_wheel">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="5.0" />
+      <inertia ixx="0.017" ixy="0" ixz="0" iyy="0.030" iyz="0" izz="0.017" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/caster_wheel.STL" />
+      </geometry>
+      <material name="wheel_dark" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 0" />
+      <geometry>
+        <cylinder radius="0.125" length="0.085" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="caster_wheel_joint" type="continuous">
+    <parent link="caster_bot" />
+    <child link="caster_wheel" />
+    <origin xyz="-0.08 -0.014 -0.17" rpy="0 0 0.003" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.05" friction="0.01" />
+  </joint>
+
+  
+  <link name="base_scan" />
+  <joint name="base_scan_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="base_scan" />
+    <origin xyz="0.95 0 0.28" rpy="0 0 0" />
+  </joint>
+
+</robot>

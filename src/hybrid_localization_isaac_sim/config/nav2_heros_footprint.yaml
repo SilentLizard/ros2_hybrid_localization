@@ -1,0 +1,12 @@
+# Source footprint from innok_heros_description/config/footprint_3wd.yaml.
+# Paste these values into the local/global costmap parameters when Nav2 bringup
+# is added to the simulator package.
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      footprint: "[[1.16,0.39],[-0.60,0.39],[-0.60,-0.39],[1.16,-0.39]]"
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      footprint: "[[1.16,0.39],[-0.60,0.39],[-0.60,-0.39],[1.16,-0.39]]"

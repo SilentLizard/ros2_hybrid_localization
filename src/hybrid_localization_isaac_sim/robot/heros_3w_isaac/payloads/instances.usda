@@ -1,0 +1,213 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.2"
+    }
+    doc = """Generated from Composed Stage of root layer /tmp/tmpx2d1bamc/innok_heros_3w_isaac_stable.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_heros_3w_isaac_s1faztr5/usdex_heros_3w_isaac/innok_heros_3w_isaac_stable.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_heros_3w_isaac_s1faztr5/temp_heros_3w_isaac/heros_3w_isaac.usd
+
+
+Generated from Composed Stage of root layer /isaac-sim/.local/share/ov/data/hybrid_localization_isaac_sim/heros_3w_isaac/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Scope "Instances"
+{
+    def Xform "beam_visual" (
+        prepend references = @./geometries.usd@</Geometries/beam_visual>
+    )
+    {
+        over "beam_visual" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/beam_visual/VisualMaterials/body_white>
+            custom string urdf:name = "beam_visual"
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "body_white" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/body_white>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "drive_box_visual" (
+        prepend references = @./geometries.usd@</Geometries/drive_box_visual>
+    )
+    {
+        over "drive_box_visual" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/drive_box_visual/VisualMaterials/body_white>
+            custom string urdf:name = "drive_box_visual"
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "body_white" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/body_white>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "caster_top_visual" (
+        prepend references = @./geometries.usd@</Geometries/caster_top_visual>
+    )
+    {
+        over "caster_top_visual" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/caster_top_visual/VisualMaterials/body_white>
+            custom string urdf:name = "caster_top_visual"
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "body_white" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/body_white>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "battery_box_visual" (
+        prepend references = @./geometries.usd@</Geometries/battery_box_visual>
+    )
+    {
+        over "battery_box_visual" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/battery_box_visual/VisualMaterials/body_white>
+            custom string urdf:name = "battery_box_visual"
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "body_white" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/body_white>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "mounting_plate_visual" (
+        prepend references = @./geometries.usd@</Geometries/mounting_plate_visual>
+    )
+    {
+        over "mounting_plate_visual" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/mounting_plate_visual/VisualMaterials/body_white>
+            custom string urdf:name = "mounting_plate_visual"
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "body_white" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/body_white>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "wheel" (
+        prepend references = @./geometries.usd@</Geometries/wheel>
+    )
+    {
+        over "wheel" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/wheel/VisualMaterials/wheel_dark>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "wheel_dark" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/wheel_dark>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "caster_bot" (
+        prepend references = @./geometries.usd@</Geometries/caster_bot>
+    )
+    {
+        over "caster_bot" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/caster_bot/VisualMaterials/body_white>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "body_white" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/body_white>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "caster_wheel" (
+        prepend references = @./geometries.usd@</Geometries/caster_wheel>
+    )
+    {
+        over "caster_wheel" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/caster_wheel/VisualMaterials/wheel_dark>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "wheel_dark" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/wheel_dark>
+            )
+            {
+            }
+        }
+    }
+}
+

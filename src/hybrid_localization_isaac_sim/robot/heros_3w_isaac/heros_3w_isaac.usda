@@ -1,0 +1,52 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.2"
+    }
+    defaultPrim = "innok_heros_3w_isaac_stable"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpx2d1bamc/innok_heros_3w_isaac_stable.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_heros_3w_isaac_s1faztr5/usdex_heros_3w_isaac/innok_heros_3w_isaac_stable.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_heros_3w_isaac_s1faztr5/temp_heros_3w_isaac/heros_3w_isaac.usd
+
+
+Generated from Composed Stage of root layer /isaac-sim/.local/share/ov/data/hybrid_localization_isaac_sim/heros_3w_isaac/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "innok_heros_3w_isaac_stable" (
+    prepend references = @./payloads/base.usda@
+    variants = {
+        string Physics = "physx"
+    }
+    append variantSets = "Physics"
+)
+{
+    variantSet "Physics" = {
+        "mujoco" (
+            prepend payload = @./payloads/Physics/mujoco.usda@
+        ) {
+
+        }
+        "none" {
+
+        }
+        "physics" (
+            prepend payload = @./payloads/Physics/physics.usda@
+        ) {
+
+        }
+        "physx" (
+            prepend payload = @./payloads/Physics/physx.usda@
+        ) {
+
+        }
+    }
+}
+
