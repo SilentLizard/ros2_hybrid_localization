@@ -9,8 +9,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mesa-utils \
     && rm -rf /var/lib/apt/lists/*
 
-COPY start-rviz.sh /usr/local/bin/start-rviz.sh
-RUN chmod +x /usr/local/bin/start-rviz.sh
-
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["rviz2"]

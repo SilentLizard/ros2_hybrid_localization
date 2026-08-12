@@ -1,7 +1,6 @@
 # Nav2 Jazzy AMCL particle-cloud runtime contract
 
-Issue #41 validates the runtime interface consumed by the future
-`hybrid_localization_ros` AMCL adapter.
+This document records the ROS 2 Jazzy/Nav2 AMCL particle-cloud runtime contract consumed by `hybrid_localization_ros`.
 
 ## Verified environment
 
@@ -29,7 +28,7 @@ repository localization test fixture.
   individual intervals from about 0.066 s to 0.950 s.
 - Message timestamps use simulation/ROS time in this test environment.
 
-## Adapter consequences for #6
+## Adapter requirements
 
 The adapter must:
 
@@ -62,4 +61,4 @@ ros2 topic hz /particle_cloud
 The Python validator treats missing rclpy endpoint metadata as advisory when
 real `ParticleCloud` messages are received. DDS graph endpoint discovery can
 lag independently of message reception; `ros2 topic info --verbose` remains
-the explicit QoS evidence for this validation issue.
+the explicit QoS evidence for this validation.

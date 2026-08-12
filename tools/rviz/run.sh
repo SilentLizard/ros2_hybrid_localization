@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 IMAGE_NAME="${RVIZ_IMAGE:-ros-jazzy-hybrid-localization-rviz}"
 RVIZ_CONFIG="${RVIZ_CONFIG:-${REPO_ROOT}/src/hybrid_localization_ros/rviz/particle_analysis.rviz}"
 FAST_DDS_PROFILE="${FAST_DDS_PROFILE:-${HOME}/rviz-container/config/fastdds.xml}"
 
-[[ -f "$RVIZ_CONFIG" ]] || { echo "RViz config not found: $RVIZ_CONFIG" >&2; exit 2; }
+[[ -f "$RVIZ_CONFIG" ]] || {
+  echo "RViz config not found: $RVIZ_CONFIG" >&2
+  exit 2
+}
+
+unset ROS_LOCALHOST_ONLY || true
 
 DOCKER_ARGS=(
   --rm -it
@@ -24,8 +30,10 @@ DOCKER_ARGS=(
 )
 
 if [[ -f "$FAST_DDS_PROFILE" ]]; then
+  echo "Using Fast DDS profile: $FAST_DDS_PROFILE"
   DOCKER_ARGS+=(
     -e FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds.xml
+    -e FASTDDS_DEFAULT_PROFILES_FILE=/config/fastdds.xml
     -v "${FAST_DDS_PROFILE}:/config/fastdds.xml:ro"
   )
 else
@@ -33,5 +41,7 @@ else
 fi
 
 exec docker run "${DOCKER_ARGS[@]}" "$IMAGE_NAME" \
-  --ros-args -p use_sim_time:=true -- \
-  -d /config/particle_analysis.rviz
+  rviz2 \
+  -d /config/particle_analysis.rviz \
+  --ros-args \
+  -p use_sim_time:=true

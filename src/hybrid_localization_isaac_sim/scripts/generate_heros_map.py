@@ -23,13 +23,10 @@ def main() -> None:
     image = Image.new("L", (width, height), 255)
     draw = ImageDraw.Draw(image)
 
-    # Layout coordinates are expressed in ROS/world orientation:
-    # +x points right and +y points up.
-    #
-    # Image coordinates use:
-    # +x points right and +y points down.
-    #
-    # Therefore Y must be flipped when rasterizing the layout into the PNG.
+    # The validated Isaac/world layout and ROS occupancy image require both
+    # image axes to be inverted when rasterizing these stored rectangle
+    # coordinates. Keep this conversion synchronized with the Isaac world
+    # builder and verify orientation using asymmetric landmarks in RViz.
     for rectangle in layout["occupied_rectangles"]:
         x0, y0, x1, y1 = (int(value) for value in rectangle)
 

@@ -1,5 +1,5 @@
 # HEROS simulator constants.
-# source: innok_heros_description 1.0.4 unless marked SIMULATION ASSUMPTION.
+# Source: innok_heros_description 1.0.4 unless marked SIMULATION ASSUMPTION.
 robot:
   variant: heros_3w
   wheel_radius: 0.16
@@ -23,10 +23,9 @@ frames:
 
 lidar:
   model: SICK_microScan3
-  scan_frame_yaw_degrees: 180.0
-  # SIMULATION ASSUMPTION: sensor not present in the Innok description package.
-  mount_xyz: [0.895, 0.0, 0.10]
+  # SIMULATION ASSUMPTION: scanner model/mount are not present in the Innok
+  # description package. Values below match the validated HEROS Isaac fixture.
+  mount_xyz: [0.95, 0.0, 0.10]
   mount_rpy: [0.0, 0.0, 0.0]
-  # Keep the correction used by the existing Isaac fixture until the imported
-  # RTX sensor's intrinsic orientation is revalidated on HEROS.
+  # The validated sensor is already oriented correctly in Isaac.
   scan_frame_yaw_degrees: 0.0

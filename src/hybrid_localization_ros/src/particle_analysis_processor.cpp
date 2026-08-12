@@ -181,10 +181,10 @@ ParticleAnalysisProducts ParticleAnalysisProcessor::process(
     clustering,
     working_id_generator);
 
-  // Issue #29 evaluates representation-level health only. Measurement-update,
-  // Gaussian-fit, recovery, and shadow-comparison evidence are added by later
-  // runtime stages, so their corresponding health fields remain explicitly
-  // unavailable rather than being synthesized here.
+  // Observation mode evaluates representation-level health only. Measurement-
+  // update, Gaussian-fit, recovery, and shadow-comparison evidence belong to
+  // later runtime stages, so their corresponding health fields remain
+  // explicitly unavailable rather than being synthesized here.
   const auto health = hybrid_localization::evaluate_localization_health(mixture);
 
   hybrid_localization::LocalizationEvidencePolicyInput policy_input;

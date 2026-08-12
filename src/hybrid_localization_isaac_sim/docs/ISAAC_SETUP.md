@@ -1,95 +1,123 @@
 # HEROS -> Isaac Sim 6.0 setup
 
-## 1. Import the robot
+This is the package-local quick setup reference. The repository-level
+`docs/isaac_sim.md` contains the complete workflow and current limitations.
 
-In Isaac Sim 6.0, use **File -> Import** and select `robot/heros_3w_isaac.urdf`.
-Use a floating/mobile base (do not fix the base to the world). Keep the imported
-root named `/World/innok_heros_3w`, or update `ROBOT_PRIM` in the graph helper.
-
-The URDF was flattened from the Innok ROS 1 xacro package because Isaac imports
-URDF, not the ROS package's Gazebo controller configuration. The manufacturer
-meshes are retained, while Gazebo and ros_control tags are intentionally absent.
-
-After import, confirm that the rear wheel joints are named:
-
-- `joint_base_wheel_rear_left`
-- `joint_base_wheel_rear_right`
-
-Run `scripts/inspect_heros_stage.py` in the Script Editor if the importer creates
-unexpected prim nesting.
-
-## 2. Add the SICK RTX lidar
-
-The supplied Innok package contains no lidar model or lidar mounting transform.
-`base_scan` is therefore a **simulation assumption**, currently placed at
-`[0.95, 0.0, 0.28]` m relative to `base_link`.
-
-Attach the same SICK microScan3 RTX/OmniLidar asset used by the existing
-TurtleBot fixture underneath the imported `base_scan` prim. Do not enable the
-lidar debug visualization; the previous fixture showed that unnecessary sensor
-render/debug work can contribute to WebRTC flicker.
-
-The graph helper preserves the existing `base_scan -> lidar_frame` 180-degree
-yaw correction. Revalidate it once on the HEROS model by checking the blind spot
-and scan/map orientation. If the imported sensor orientation is corrected at the
-USD level, set `SCAN_FRAME_YAW_DEGREES = 0.0` instead of applying both rotations.
-
-## 3. Create ROS graphs
-
-Open `scripts/heros_isaac_graph_helper.py` in Isaac's Script Editor and run it.
-It creates the same external contract as the current TurtleBot fixture:
-
-- `/cmd_vel`
-- `/clock`
-- `/odom`
-- `/tf`
-- `/tf_static`
-- `/scan`
-
-The drive constants are taken from the Innok description: 0.16 m wheel radius,
-0.58 m wheel separation, 1.0 m/s maximum linear speed, and 2.0 rad/s maximum
-angular speed.
-
-## 4. Ground placement
-
-The original ROS/Gazebo launch spawned HEROS at `z=0.4`. After importing into
-Isaac, place the robot so the drive wheels and caster sit on the floor without
-initial penetration. Exact root Z can depend on importer fixed-joint merging, so
-check contacts visually/with physics rather than hard-coding the Gazebo spawn Z.
-
-## 5. ROS validation
-
-After pressing Play:
+## 1. Start Isaac through the repository launcher
 
 ```bash
-ros2 topic list
-ros2 topic echo /scan --once
-ros2 topic hz /scan
-ros2 topic echo /odom --once
-ros2 run tf2_ros tf2_echo odom lidar_frame
+cd ~/Development/ros2_hybrid_localization
+tools/isaac_sim/run.sh
 ```
 
-Then use `config/amcl_heros.yaml` with the same map-server/AMCL bringup pattern
-as the existing issue-41 fixture.
+The repository is mounted inside the container at
+`/workspace/ros2_hybrid_localization`, and the package root is exported through
+`HYBRID_LOCALIZATION_ISAAC_SIM_ROOT` so Script Editor temporary files can still
+resolve configuration data.
 
-## 6. Industrial-scale map
+## 2. Import or load HEROS
 
-`maps/heros_localization_map.*` is a 30 m x 30 m, 5 cm/cell deterministic test
-map with wider passages than the TurtleBot map. The corresponding collision
-geometry still needs to be built in Isaac so rendered/raycast geometry and the
-occupancy map match. Treat the PNG as the reference layout for that next step.
+Import `robot/heros_3w_isaac.urdf` as a floating/mobile robot, or load the saved
+working scene. The current graph helper expects the imported root:
 
-## 7. Build collision geometry from the map source
+```text
+/World/heros_3w
+```
 
-Before using AMCL for localization-quality checks, run
-`scripts/build_heros_world.py` in Isaac Sim's Script Editor. The script creates
-`/World/HEROS_TestWorld` from `config/heros_world_layout.json`.
+The validated hierarchy separates geometry and physics scopes and contains the
+rear drive joints:
 
-`generate_heros_map.py` uses that same JSON file to produce
-`maps/heros_localization_map.png`, so the occupancy grid and RTX-lidar collision
-geometry have one source of truth. Do not validate AMCL/GMM accuracy against a
-map whose corresponding Isaac collision geometry has not been generated.
+```text
+joint_base_wheel_rear_left
+joint_base_wheel_rear_right
+```
 
-After pressing Play, verify coarse alignment quantitatively with
-`scripts/validate_scan_map_alignment.py` before interpreting the localization
-result in RViz.
+Use `scripts/inspect_heros_stage.py` when importer nesting changes.
+
+## 3. Scanner fixture
+
+The Innok source description contains no SICK lidar or scanner mount. The
+current fixture therefore adds `base_scan` at approximately:
+
+```text
+[0.95, 0.0, 0.10] m relative to base_link
+```
+
+Ensure exactly one SICK microScan3-style RTX `OmniLidar` exists beneath
+`base_scan`. In the validated HEROS stage the sensor is already oriented
+correctly, so `base_scan -> lidar_frame` is identity. Do not apply the old 180°
+TurtleBot correction at the same time.
+
+## 4. Build matching world geometry
+
+Run `scripts/build_heros_world.py` in the Isaac Script Editor. It creates static
+geometry below:
+
+```text
+/World/HEROS_TestWorld
+```
+
+from `config/heros_world_layout.json`.
+
+The ROS occupancy map is generated from the same layout using:
+
+```bash
+python3 scripts/generate_heros_map.py
+```
+
+The currently validated map orientation includes the required image-axis
+conversion. Do not manually flip the map in RViz.
+
+## 5. Create ROS graphs
+
+Run `scripts/heros_isaac_graph_helper.py` in the Script Editor. It resolves the
+current HEROS articulation hierarchy and creates:
+
+```text
+/cmd_vel
+/clock
+/odom
+/tf
+/tf_static
+/scan
+```
+
+The source-backed drive constants are 0.16 m wheel radius, 0.58 m wheel
+separation, 1.0 m/s maximum linear speed, and 2.0 rad/s maximum angular speed.
+
+## 6. Press Play and verify
+
+Outside the Isaac container, initialize ROS/Fast DDS first:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source ~/.ros/isaac_fastdds_env.sh
+unset ROS_LOCALHOST_ONLY
+export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+source ~/Development/ros2_hybrid_localization/install/setup.bash
+```
+
+Then:
+
+```bash
+ros2 topic hz /scan
+ros2 topic hz /odom
+ros2 run tf2_ros tf2_echo odom base_link
+ros2 run tf2_ros tf2_echo base_link base_scan
+ros2 run tf2_ros tf2_echo base_scan lidar_frame
+```
+
+## 7. Start observation mode
+
+```bash
+ros2 run hybrid_localization_isaac_sim start_observation_mode.sh
+```
+
+Before interpreting AMCL/GMM quality:
+
+```bash
+ros2 run hybrid_localization_isaac_sim validate_scan_map_alignment.py --tolerance 0.05
+```
+
+The #7 validated run achieved a 0.746 hit fraction at 0.05 m and 0.994 at
+0.10 m after map-orientation correction.

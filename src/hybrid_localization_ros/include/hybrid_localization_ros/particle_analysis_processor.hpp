@@ -16,9 +16,10 @@ namespace hybrid_localization_ros
 
 /// Configuration for one stateless observation-mode particle analysis.
 ///
-/// Runtime parameter exposure is intentionally deferred to issue #11. Issue #29
-/// uses the validated core defaults so the ROS node can exercise the complete
-/// particle -> clustering -> GMM -> health -> evidence path first.
+/// Only the parameter groups consumed by observation mode are exposed at
+/// runtime. The processor covers the complete particle -> clustering -> GMM ->
+/// health -> evidence path without running recursive GMM tracking or authority
+/// switching.
 struct ParticleAnalysisProcessorConfig
 {
   hybrid_localization::ParticleClusteringConfig clustering{};
