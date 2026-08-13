@@ -21,6 +21,9 @@ ROS_SHARE="${ROS_PREFIX}/share/hybrid_localization_ros"
 MAP_YAML="${MAP_YAML:-${ISAAC_SHARE}/maps/heros_localization_map.yaml}"
 AMCL_PARAM_FILE="${AMCL_PARAM_FILE:-${ISAAC_SHARE}/config/amcl_heros.yaml}"
 PARTICLE_ANALYSIS_PARAM_FILE="${PARTICLE_ANALYSIS_PARAM_FILE:-${ROS_SHARE}/config/particle_analysis.yaml}"
+AMCL_INIT_MODE="${AMCL_INIT_MODE:-known}"
+AMCL_RANDOM_SEED="${AMCL_RANDOM_SEED:-41}"
+AMCL_RANDOM_LAYOUT="${AMCL_RANDOM_LAYOUT:-}"
 
 for file in "$MAP_YAML" "$AMCL_PARAM_FILE" "$PARTICLE_ANALYSIS_PARAM_FILE"; do
   [[ -f "$file" ]] || { echo "Required file missing: $file" >&2; exit 2; }
@@ -80,6 +83,32 @@ ros2 lifecycle set /map_server configure
 ros2 lifecycle set /map_server activate
 ros2 lifecycle set /amcl configure
 ros2 lifecycle set /amcl activate
+
+case "$AMCL_INIT_MODE" in
+  known)
+    echo "AMCL initialization: configured known initial pose"
+    ;;
+  global)
+    echo "AMCL initialization: global free-space particle distribution"
+    ros2 run hybrid_localization_isaac_sim reset_amcl_localization.py \
+      --mode global || exit 5
+    ;;
+  random-prior)
+    [[ -n "$AMCL_RANDOM_LAYOUT" ]] || {
+      echo "AMCL_RANDOM_LAYOUT is required for AMCL_INIT_MODE=random-prior" >&2
+      exit 5
+    }
+    echo "AMCL initialization: deterministic random prior (seed=$AMCL_RANDOM_SEED)"
+    ros2 run hybrid_localization_isaac_sim reset_amcl_localization.py \
+      --mode random-prior \
+      --layout "$AMCL_RANDOM_LAYOUT" \
+      --seed "$AMCL_RANDOM_SEED" || exit 5
+    ;;
+  *)
+    echo "Invalid AMCL_INIT_MODE=$AMCL_INIT_MODE (known|global|random-prior)" >&2
+    exit 5
+    ;;
+esac
 
 wait_for_topic /map 100 || exit 5
 wait_for_topic /particle_cloud 100 || exit 5

@@ -10,7 +10,7 @@ microScan3-style RTX lidar.
 ![HEROS Isaac fixture](images/isaac-heros-fixture.png)
 
 This is still a **development fixture**, not yet the deterministic packaged
-benchmark platform planned for later simulator-platform work.
+benchmark platform planned under the later simulator issues.
 
 ## Current fixture contract
 
@@ -102,26 +102,48 @@ and creates the drive/clock/odometry/TF/lidar graphs.
 
 ## Shared map/world layout
 
-The deterministic test environment is based on:
+The nominal test environment is based on:
 
 ```text
 config/heros_world_layout.json
 ```
 
+The layout uses schema version 2 and stores geometry in ROS map-cell coordinates
+rather than PNG coordinates:
+
+```text
+cell (0,0) = lower-left map cell
++x = right
++y = up
+```
+
 That shared source feeds both:
 
 ```text
-scripts/generate_heros_map.py -> maps/heros_localization_map.png
-scripts/build_heros_world.py  -> /World/HEROS_TestWorld
+scripts/generate_localization_map.py -> occupancy image + map YAML
+scripts/build_localization_world.py  -> /World/HEROS_TestWorld
 ```
 
-The map is 600 x 600 cells at 0.05 m/cell with origin `[-15, -15, 0]`, yielding a
-30 m x 30 m occupancy grid.
+The HEROS convenience wrappers still regenerate the committed nominal assets:
 
-A map-orientation mismatch was discovered during observation-mode validation because the
-layout is sufficiently symmetric to make a coarse endpoint metric look
-plausible even when the image orientation is wrong. The current generated map
-and live Isaac world were visually checked after correcting both image axes.
+```text
+scripts/generate_heros_map.py
+scripts/build_heros_world.py
+```
+
+The nominal map is 600 x 600 cells at 0.05 m/cell with origin
+`[-15, -15, 0]`, yielding a 30 m x 30 m occupancy grid.
+
+The previous orientation problem came from allowing image-coordinate conventions
+to leak into the shared layout. Conversion is now centralized in
+`scripts/world_layout.py`: occupancy rendering converts ROS +y into image rows
+by flipping **Y only**, while Isaac converts the same ROS cells directly into
+metric world coordinates with no image-axis flip.
+
+More complex deterministic maps can be created with
+`scripts/generate_world_layout.py`. The package includes
+`config/worlds/warehouse_demo.json` as an example with shelves and circular
+pillars.
 
 ## ROS environment outside the Isaac container
 
@@ -150,7 +172,7 @@ ros2 run tf2_ros tf2_echo base_link base_scan
 ros2 run tf2_ros tf2_echo base_scan lidar_frame
 ```
 
-During observation-mode validation `/scan` was observed around 46-49 Hz. Brief initial
+During #7 validation `/scan` was observed around 46-49 Hz. Brief initial
 `tf2_echo` "frame does not exist" messages may occur while DDS/TF discovery
 completes; a transform that subsequently resolves is the meaningful result.
 
@@ -203,7 +225,7 @@ For a stricter check:
 ros2 run hybrid_localization_isaac_sim validate_scan_map_alignment.py --tolerance 0.05
 ```
 
-Validated observation-mode results after correcting map orientation:
+Validated #7 results after correcting map orientation:
 
 ```text
 0.10 m tolerance: 167 / 168 endpoints, hit fraction 0.994, PASS
@@ -242,3 +264,45 @@ src/hybrid_localization_ros/rviz/particle_analysis.rviz
 
 A standalone copy of `tools/rviz` plus the RViz config may also be used on a
 client without cloning the full repository.
+
+
+## Switching the static Isaac test world
+
+For manual fixture development, run `scripts/change_isaac_world.py` in the
+Isaac Script Editor. Select a layout through its `TARGET_LAYOUT` constant or the
+`HYBRID_LOCALIZATION_WORLD_LAYOUT` environment variable.
+
+The script removes and rebuilds only `/World/HEROS_TestWorld`; it does not
+restart the robot, change AMCL, or reload `map_server`. That separation is
+intentional here: synchronized world/map/reset/ground-truth control belongs to
+the later scenario-controller layer rather than the environment-packaging
+milestone.
+
+
+## Deterministic generated world suite
+
+The simulator package also contains a 20-entry deterministic map catalog under
+`config/world_scenarios.json`. A scenario ID is a compact recipe rather than a
+checked-in raster map: preset, dimensions, obstacle counts, spawn clearance,
+and PRNG seed fully determine the resulting world.
+
+The generator supports `warehouse`, `rooms`, `mixed`, and `corridors` layouts,
+including small boxes and circular pillars. Current catalog dimensions range
+from 600 to 1200 cells at 0.05 m/cell (approximately 30-60 m per side).
+
+Use `materialize_world_scenario.py --scenario Sxx` to create both the schema-v2
+layout and matching Nav2 occupancy map, then select the same scenario from
+`change_isaac_world.py`.
+
+AMCL observation tests can now use three initialization policies:
+
+- `known`: deterministic configured pose, useful for geometry smoke tests;
+- `global`: uniform free-space particle initialization, suitable when the
+  starting pose is intentionally unknown;
+- `random-prior`: seeded pseudo-random free-space prior with covariance for
+  repeatable convergence stress tests.
+
+The latter two avoid treating `(0,0,0)` as a required localization prior even
+though the physical Isaac fixture currently starts there. Physical robot
+teleport/reset remains part of the subsequent scenario-controller and
+ground-truth work.
