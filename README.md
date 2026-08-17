@@ -11,6 +11,51 @@ repository consumes that cloud, clusters it, extracts a Gaussian mixture,
 computes health/evidence metrics, and visualizes the result in RViz. The hybrid
 pipeline does **not** publish an authoritative localization transform yet.
 
+## Engineering overview
+
+The project is structured to keep probabilistic and numerical localization logic
+independent from ROS 2 integration. The current implementation includes:
+
+- a ROS-independent C++20 core for SE(2) geometry, weighted particle statistics,
+  clustering, Gaussian fitting, and bounded Gaussian-mixture operations;
+- recursive Gaussian-mixture prediction, measurement correction, pruning,
+  deterministic merging, evidence-driven splitting, and hard component-budget
+  enforcement;
+- stable hypothesis IDs and direct-parent provenance across mixture operations;
+- localization-health metrics, particle/GMM comparison, transition-evidence
+  policy, and a hysteresis-based representation supervisor;
+- local and map-aware global recovery-particle sampling;
+- a validated Nav2 AMCL particle-cloud adapter and ROS 2 observation pipeline;
+- transactional runtime parameter validation;
+- deterministic RViz visualization and an Isaac Sim localization fixture;
+- GoogleTest coverage together with GitHub Actions, AddressSanitizer, and
+  UndefinedBehaviorSanitizer validation.
+
+The latest validated checkpoint contains **213 passing tests**.
+
+For a source-oriented overview, see
+[docs/code_reference.md](docs/code_reference.md). In particular, the
+`hybrid_localization_core` package contains the ROS-independent algorithms and
+state-management logic, while `hybrid_localization_ros` demonstrates the ROS 2
+integration boundary.
+
+### Current versus target system
+
+The distinction between implemented and planned functionality is intentional:
+
+- **implemented runtime:** Nav2 AMCL remains authoritative while this project
+  analyzes its weighted particle belief and publishes Gaussian-mixture,
+  localization-health, transition-evidence, and visualization outputs;
+- **implemented core:** the repository already contains the recursive bounded
+  GMM tracker, mixture-management operations, recovery primitives, health
+  policy, and transition supervisor;
+- **not yet integrated as the live localization authority:** GMM shadow
+  tracking, estimator handover, particle activation/deactivation, recovery
+  injection, and authoritative `map -> odom` switching.
+
+The project is therefore a working research prototype rather than a completed
+replacement for Nav2 AMCL.
+
 ![Observation-mode RViz](docs/images/rviz-overview.png)
 
 ## Current data flow
@@ -46,13 +91,13 @@ this implemented observation-mode architecture and the planned hybrid tracker.
 ## Packages
 
 ```text
-src/hybrid_localization_core/       ROS-independent algorithms and policies
-src/hybrid_localization_msgs/       ROS 2 message interfaces
-src/hybrid_localization_ros/        AMCL adapter, analysis node, RViz markers
-src/hybrid_localization_isaac_sim/  HEROS + SICK Isaac development fixture
-tools/isaac_sim/                    Isaac Sim container launcher
-tools/rviz/                         remote RViz Docker client
-docs/                               system-level documentation
+src/hybrid_localization_core/        ROS-independent algorithms and policies
+src/hybrid_localization_msgs/        ROS 2 message interfaces
+src/hybrid_localization_ros/         AMCL adapter, analysis node, RViz markers
+src/hybrid_localization_isaac_sim/   HEROS + SICK Isaac development fixture
+tools/isaac_sim/                     Isaac Sim container launcher
+tools/rviz/                          remote RViz Docker client
+docs/                                system-level documentation
 ```
 
 ## Requirements
@@ -81,7 +126,8 @@ cd ~/Development/ros2_hybrid_localization
 source install/setup.bash
 ```
 
-The current observation-mode implementation is covered by 213 passing tests at the latest recorded validation checkpoint.
+The current observation-mode implementation is covered by 213 passing tests at
+the latest recorded validation checkpoint.
 
 ## ROS network environment
 
@@ -165,7 +211,8 @@ Important topics are:
 
 The measured Jazzy AMCL `/particle_cloud` contract uses
 `nav2_msgs/msg/ParticleCloud`, BEST_EFFORT reliability, VOLATILE durability,
-and the `map` frame. See [docs/amcl_particle_cloud_interface.md](docs/amcl_particle_cloud_interface.md).
+and the `map` frame. See
+[docs/amcl_particle_cloud_interface.md](docs/amcl_particle_cloud_interface.md).
 
 ## Runtime parameters
 
@@ -229,7 +276,8 @@ GMM-after-convergence architecture.
 - [Current limitations](docs/limitations.md)
 - [AMCL particle-cloud contract](docs/amcl_particle_cloud_interface.md)
 
-This README and `docs/` are the repository-facing documentation for the runnable system and its current limitations.
+This README and `docs/` are the repository-facing documentation for the runnable
+system and its current limitations.
 
 ## Maturity and safety
 
