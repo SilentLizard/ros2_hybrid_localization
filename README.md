@@ -283,3 +283,19 @@ system and its current limitations.
 
 This repository is a research and portfolio prototype. It is not intended for
 production localization, safety-critical navigation, or certification use.
+
+## License
+
+Original code and project-specific assets in this repository are licensed under
+the MIT License unless otherwise noted.
+
+The Innok HEROS robot geometry, meshes, and derived simulation model include
+material originating from the
+[innok_heros_description](https://github.com/innokrobotics/innok_heros_description)
+project and remain subject to the upstream BSD license and attribution
+requirements.
+
+See
+[`src/hybrid_localization_isaac_sim/THIRD_PARTY_NOTICE.md`](src/hybrid_localization_isaac_sim/THIRD_PARTY_NOTICE.md)
+for the affected files, source attribution, and license terms.
+

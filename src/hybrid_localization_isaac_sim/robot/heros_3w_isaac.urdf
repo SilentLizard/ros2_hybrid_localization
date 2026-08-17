@@ -1,4 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
+<!--
+  Derived in part from Innok Robotics GmbH innok_heros_description 1.0.4.
+  Source: https://github.com/innokrobotics/innok_heros_description
+  See ../THIRD_PARTY_NOTICE.md for attribution and BSD license terms.
+-->
 <robot name="innok_heros_3w_isaac_stable">
   <!--
     Isaac Sim velocity-drive tuning:
