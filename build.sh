@@ -12,6 +12,10 @@ CORE_PACKAGE="hybrid_localization_core"
 CORE_PACKAGE_DIR="${WORKSPACE_DIR}/src/${CORE_PACKAGE}"
 CORE_CMAKE="${CORE_PACKAGE_DIR}/CMakeLists.txt"
 
+ISAAC_PACKAGE="hybrid_localization_isaac_sim"
+ISAAC_PACKAGE_DIR="${WORKSPACE_DIR}/src/${ISAAC_PACKAGE}"
+ISAAC_CMAKE="${ISAAC_PACKAGE_DIR}/CMakeLists.txt"
+
 BUILD_TYPE="RelWithDebInfo"
 CLEAN_BUILD=false
 RUN_BUILD=true
@@ -98,142 +102,96 @@ require_command()
 
 update_cmake_lists()
 {
-  if [[ ! -f "${CORE_CMAKE}" ]]; then
-    error "CMakeLists.txt not found: ${CORE_CMAKE}"
-    exit 1
-  fi
+  log "Updating generated CMake sections"
 
-  log "Updating generated sections in ${CORE_CMAKE}"
-
-  python3 - "${CORE_PACKAGE_DIR}" "${CORE_CMAKE}" "${CORE_PACKAGE}" <<'PY'
+  python3 - "${CORE_PACKAGE_DIR}" "${CORE_CMAKE}" "${ISAAC_PACKAGE_DIR}" "${ISAAC_CMAKE}" <<'PY_AUTOCMAKE'
 from __future__ import annotations
 
 import re
 import sys
 from pathlib import Path
 
-
-package_dir = Path(sys.argv[1]).resolve()
-cmake_path = Path(sys.argv[2]).resolve()
-project_name = sys.argv[3]
-
-source_dir = package_dir / "src"
-test_dir = package_dir / "test"
+core_package_dir = Path(sys.argv[1]).resolve()
+core_cmake_path = Path(sys.argv[2]).resolve()
+isaac_package_dir = Path(sys.argv[3]).resolve()
+isaac_cmake_path = Path(sys.argv[4]).resolve()
 
 
-def relative_cpp_files(directory: Path) -> list[str]:
-    """Return sorted C++ source paths relative to the package directory."""
-    if not directory.is_dir():
-        return []
-
-    return sorted(
-        path.relative_to(package_dir).as_posix()
-        for path in directory.rglob("*.cpp")
-        if path.is_file()
-    )
-
-
-def replace_marked_section(
-    content: str,
-    start_marker: str,
-    end_marker: str,
-    replacement_body: str,
-) -> str:
-    """Replace content inside one explicitly marked CMake section."""
+def replace_marked_section(content: str, start_marker: str, end_marker: str, replacement_body: str) -> str:
     pattern = re.compile(
-        rf"(?P<start>^[ \t]*{re.escape(start_marker)}[ \t]*$)"
-        rf".*?"
-        rf"(?P<end>^[ \t]*{re.escape(end_marker)}[ \t]*$)",
+        rf"(?P<start>^[ \t]*{re.escape(start_marker)}[ \t]*$).*?(?P<end>^[ \t]*{re.escape(end_marker)}[ \t]*$)",
         flags=re.MULTILINE | re.DOTALL,
     )
-
     match = pattern.search(content)
-
     if match is None:
-        raise RuntimeError(
-            f"Could not find marked section:\n"
-            f"  {start_marker}\n"
-            f"  {end_marker}"
-        )
-
-    return (
-        content[: match.start()]
-        + match.group("start")
-        + "\n"
-        + replacement_body.rstrip()
-        + "\n"
-        + match.group("end")
-        + content[match.end() :]
-    )
+        raise RuntimeError(f"Could not find marked section: {start_marker} ... {end_marker}")
+    return content[:match.start()] + match.group("start") + "\n" + replacement_body.rstrip() + "\n" + match.group("end") + content[match.end():]
 
 
-source_files = relative_cpp_files(source_dir)
-test_files = [
-    path
-    for path in relative_cpp_files(test_dir)
-    if Path(path).name.startswith("test_")
-]
+def write_if_changed(path: Path, original: str, updated: str) -> None:
+    if updated != original:
+        path.write_text(updated, encoding="utf-8")
+        print(f"Updated: {path}")
+    else:
+        print(f"No changes required: {path}")
 
-if not source_files:
-    raise RuntimeError(f"No .cpp files found under {source_dir}")
 
-source_lines = "\n".join(f"  {path}" for path in source_files)
+def relative_files(package_dir: Path, directory: Path, pattern: str) -> list[str]:
+    if not directory.is_dir():
+        return []
+    return sorted(path.relative_to(package_dir).as_posix() for path in directory.rglob(pattern) if path.is_file())
 
-source_section = (
-    f"set(HYBRID_LOCALIZATION_CORE_SOURCES\n"
-    f"{source_lines}\n"
-    f")"
-)
 
-test_blocks: list[str] = []
+def update_core() -> None:
+    source_files = relative_files(core_package_dir, core_package_dir / "src", "*.cpp")
+    test_files = [p for p in relative_files(core_package_dir, core_package_dir / "test", "*.cpp") if Path(p).name.startswith("test_")]
+    if not source_files:
+        raise RuntimeError(f"No .cpp files found under {core_package_dir / 'src'}")
+    source_section = "set(HYBRID_LOCALIZATION_CORE_SOURCES\n" + "\n".join(f"  {p}" for p in source_files) + "\n)"
+    blocks = []
+    for test_path in test_files:
+        target = Path(test_path).stem
+        blocks.append(f"  ament_add_gtest({target}\n    {test_path}\n  )\n  target_link_libraries({target}\n    ${{PROJECT_NAME}}\n  )")
+    test_section = "\n\n".join(blocks) if blocks else "  # No test_*.cpp files were found."
+    original = core_cmake_path.read_text(encoding="utf-8")
+    updated = replace_marked_section(original, "# BEGIN AUTO SOURCES", "# END AUTO SOURCES", source_section)
+    updated = replace_marked_section(updated, "# BEGIN AUTO TESTS", "# END AUTO TESTS", test_section)
+    write_if_changed(core_cmake_path, original, updated)
 
-for test_path in test_files:
-    test_target = Path(test_path).stem
 
-    test_blocks.append(
-        f"  ament_add_gtest({test_target}\n"
-        f"    {test_path}\n"
-        f"  )\n"
-        f"  target_link_libraries({test_target}\n"
-        f"    ${{PROJECT_NAME}}\n"
-        f"  )"
-    )
+def python_imports_rclpy(path: Path) -> bool:
+    text = path.read_text(encoding="utf-8")
+    return bool(re.search(r"^\s*(?:from\s+rclpy\b|import\s+rclpy\b)", text, re.MULTILINE))
 
-if test_blocks:
-    test_section = "\n\n".join(test_blocks)
-else:
-    test_section = "  # No test_*.cpp files were found."
 
-original = cmake_path.read_text(encoding="utf-8")
+def update_isaac() -> None:
+    scripts_dir = isaac_package_dir / "scripts"
+    tests_dir = isaac_package_dir / "test"
+    python_scripts = sorted(p for p in scripts_dir.glob("*.py") if p.is_file())
+    shell_scripts = sorted(p for p in scripts_dir.glob("*.sh") if p.is_file())
+    host_tools = sorted([*shell_scripts, *(p for p in python_scripts if python_imports_rclpy(p))], key=lambda p: p.name)
+    host_set = set(host_tools)
+    support_scripts = [p for p in python_scripts if p not in host_set]
+    pytest_files = sorted(p for p in tests_dir.glob("test_*.py") if p.is_file())
+    rel = lambda p: p.relative_to(isaac_package_dir).as_posix()
+    support_section = "\n".join(f"    {rel(p)}" for p in support_scripts) or "    # No Isaac/support Python scripts were found."
+    host_section = "\n".join(f"    {rel(p)}" for p in host_tools) or "    # No ROS-host executable scripts were found."
+    pytest_section = "\n".join(f"  ament_add_pytest_test({p.stem} {rel(p)})" for p in pytest_files) or "  # No test_*.py files were found."
+    original = isaac_cmake_path.read_text(encoding="utf-8")
+    updated = replace_marked_section(original, "# BEGIN AUTO ISAAC SUPPORT SCRIPTS", "# END AUTO ISAAC SUPPORT SCRIPTS", support_section)
+    updated = replace_marked_section(updated, "# BEGIN AUTO ROS HOST TOOLS", "# END AUTO ROS HOST TOOLS", host_section)
+    updated = replace_marked_section(updated, "# BEGIN AUTO PYTESTS", "# END AUTO PYTESTS", pytest_section)
+    write_if_changed(isaac_cmake_path, original, updated)
+    print("Isaac/support scripts:")
+    for p in support_scripts: print(f"  - {rel(p)}")
+    print("ROS-host tools:")
+    for p in host_tools: print(f"  - {rel(p)}")
+    print("Isaac pytest sources:")
+    for p in pytest_files: print(f"  - {rel(p)}")
 
-updated = replace_marked_section(
-    original,
-    "# BEGIN AUTO SOURCES",
-    "# END AUTO SOURCES",
-    source_section,
-)
-
-updated = replace_marked_section(
-    updated,
-    "# BEGIN AUTO TESTS",
-    "# END AUTO TESTS",
-    test_section,
-)
-
-if updated != original:
-    cmake_path.write_text(updated, encoding="utf-8")
-    print(f"Updated: {cmake_path}")
-else:
-    print(f"No changes required: {cmake_path}")
-
-print("Library sources:")
-for source_file in source_files:
-    print(f"  - {source_file}")
-
-print("Test sources:")
-for test_file in test_files:
-    print(f"  - {test_file}")
-PY
+update_core()
+update_isaac()
+PY_AUTOCMAKE
 }
 
 

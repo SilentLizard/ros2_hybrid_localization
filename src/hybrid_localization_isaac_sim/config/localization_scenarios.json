@@ -1,0 +1,446 @@
+{
+  "schema_version": 1,
+  "description": "Deterministic runtime localization scenarios. Physical robot truth and localization-belief initialization are intentionally independent.",
+  "scenarios": [
+    {
+      "id": "S00",
+      "world_scenario": "S00",
+      "seed": 1001,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S01",
+      "world_scenario": "S01",
+      "seed": 1098,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S02",
+      "world_scenario": "S02",
+      "seed": 1195,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S03",
+      "world_scenario": "S03",
+      "seed": 1292,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S04",
+      "world_scenario": "S04",
+      "seed": 1389,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S05",
+      "world_scenario": "S05",
+      "seed": 1486,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S06",
+      "world_scenario": "S06",
+      "seed": 1583,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S07",
+      "world_scenario": "S07",
+      "seed": 1680,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S08",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S09",
+      "world_scenario": "S09",
+      "seed": 1874,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S10",
+      "world_scenario": "S10",
+      "seed": 1971,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S11",
+      "world_scenario": "S11",
+      "seed": 2068,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S12",
+      "world_scenario": "S12",
+      "seed": 2165,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S13",
+      "world_scenario": "S13",
+      "seed": 2262,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S14",
+      "world_scenario": "S14",
+      "seed": 2359,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S15",
+      "world_scenario": "S15",
+      "seed": 2456,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S16",
+      "world_scenario": "S16",
+      "seed": 2553,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S17",
+      "world_scenario": "S17",
+      "seed": 2650,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S18",
+      "world_scenario": "S18",
+      "seed": 2747,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S19",
+      "world_scenario": "S19",
+      "seed": 2844,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    }
+  ]
+}
