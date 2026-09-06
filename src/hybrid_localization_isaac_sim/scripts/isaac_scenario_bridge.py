@@ -27,17 +27,19 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 COMMAND_TOPIC = "/hybrid_localization/scenario_command"
 STATUS_TOPIC = "/hybrid_localization/scenario_status"
 GROUND_TRUTH_TOPIC = "/hybrid_localization/ground_truth/pose"
 ACTIVE_SCENARIO_TOPIC = "/hybrid_localization/active_scenario"
+FAULT_STATUS_TOPIC = "/hybrid_localization/fault_status"
 GROUND_TRUTH_FRAME = "map"
 GROUND_TRUTH_RATE_HZ = 20.0
 WORLD_SYNC_UPDATES = 2
 RESET_STABLE_UPDATES = 3
+FAULT_STABLE_UPDATES = 3
 
 _BRIDGE_INSTANCE = None
 
@@ -115,6 +117,67 @@ def parse_command(payload: str) -> ScenarioCommand:
     return ScenarioCommand(request_id, scenario_id, parsed_override, action)
 
 
+
+def _normalize_yaw(yaw: float) -> float:
+    return math.atan2(math.sin(yaw), math.cos(yaw))
+
+
+def kidnapped_target_pose(
+    current_pose: tuple[float, float, float],
+    parameters: Mapping[str, Any],
+) -> tuple[float, float, float]:
+    """Apply a kidnapped-robot SE(2) offset in the map/world frame."""
+
+    return (
+        current_pose[0] + float(parameters["x_offset_m"]),
+        current_pose[1] + float(parameters["y_offset_m"]),
+        _normalize_yaw(current_pose[2] + float(parameters["yaw_offset_rad"])),
+    )
+
+
+def fault_status_payload(
+    *,
+    scenario_id: str,
+    scheduled_fault,
+    scenario_activation_sim_time_s: float,
+    detail: str = "",
+) -> str:
+    """Serialize one deterministic fault state for observers and #45."""
+
+    specification = scheduled_fault.specification
+    value: dict[str, Any] = {
+        "scenario_id": scenario_id,
+        "fault_id": specification.fault_id,
+        "fault_type": specification.fault_type.value,
+        "state": scheduled_fault.state.value,
+        "scenario_activation_sim_time_s": scenario_activation_sim_time_s,
+        "scheduled_elapsed_time_s": specification.start_time_s,
+        "scheduled_sim_time_s": scenario_activation_sim_time_s + specification.start_time_s,
+        "seed": specification.seed,
+        "parameters": dict(specification.parameters),
+    }
+    if scheduled_fault.activation_sim_time_s is not None:
+        value["activation_sim_time_s"] = scheduled_fault.activation_sim_time_s
+    if scheduled_fault.completion_sim_time_s is not None:
+        value["completion_sim_time_s"] = scheduled_fault.completion_sim_time_s
+    if scheduled_fault.error_detail is not None:
+        value["error"] = scheduled_fault.error_detail
+    if detail:
+        value["detail"] = detail
+    return json.dumps(value, sort_keys=True)
+
+
+
+def active_scenario_payload(pending: Mapping[str, Any], activation_sim_time_s: float) -> str:
+    """Serialize the retained active-scenario contract used by ROS-side injectors."""
+
+    if not math.isfinite(activation_sim_time_s) or activation_sim_time_s < 0.0:
+        raise IsaacScenarioBridgeError("activation_sim_time_s must be finite and >= 0")
+    active = dict(pending)
+    active["state"] = "active"
+    active["activation_sim_time_s"] = float(activation_sim_time_s)
+    return json.dumps(active, sort_keys=True)
+
 def status_payload(
     command: ScenarioCommand,
     *,
@@ -170,6 +233,9 @@ class IsaacScenarioBridge:
         self._active_pub = self._node.create_publisher(
             self._String, ACTIVE_SCENARIO_TOPIC, active_qos
         )
+        self._fault_status_pub = self._node.create_publisher(
+            self._String, FAULT_STATUS_TOPIC, active_qos
+        )
         self._ground_truth_pub = self._node.create_publisher(
             self._PoseStamped, GROUND_TRUTH_TOPIC, 10
         )
@@ -181,9 +247,25 @@ class IsaacScenarioBridge:
         self._reset = _load_module("reset_heros_scenario", root / "scripts" / "reset_heros_scenario.py")
         self._world = _load_module("build_localization_world", root / "scripts" / "build_localization_world.py")
         self._runtime = _load_module("scenario_runtime", root / "scripts" / "scenario_runtime.py")
+        self._fault_scheduler_module = _load_module(
+            "fault_scheduler", root / "scripts" / "fault_scheduler.py"
+        )
+        self._environment_geometry = _load_module(
+            "environment_fault_geometry", root / "scripts" / "environment_fault_geometry.py"
+        )
+        self._environment_backend_module = _load_module(
+            "isaac_environment_faults", root / "scripts" / "isaac_environment_faults.py"
+        )
         self._robot_backend = self._reset.IsaacArticulationBackend()
+        self._environment_backend = (
+            self._environment_backend_module.IsaacEnvironmentFaultController()
+        )
+        self._fault_scheduler = self._fault_scheduler_module.DeterministicFaultScheduler()
         self._pending: dict[str, Any] | None = None
+        self._pending_faults = ()
         self._apply_work: dict[str, Any] | None = None
+        self._fault_work: dict[str, Any] | None = None
+        self._active_dynamic_faults: dict[str, dict[str, Any]] = {}
 
         self._last_ground_truth_time = -1.0
         self._period = 1.0 / GROUND_TRUTH_RATE_HZ
@@ -202,6 +284,20 @@ class IsaacScenarioBridge:
         msg.data = payload
         self._status_pub.publish(msg)
 
+    def _publish_fault_status(self, scheduled_fault, *, detail: str = "") -> None:
+        activation_time = self._fault_scheduler.scenario_activation_sim_time_s
+        scenario_id = self._fault_scheduler.scenario_id
+        if activation_time is None or scenario_id is None:
+            return
+        msg = self._String()
+        msg.data = fault_status_payload(
+            scenario_id=scenario_id,
+            scheduled_fault=scheduled_fault,
+            scenario_activation_sim_time_s=activation_time,
+            detail=detail,
+        )
+        self._fault_status_pub.publish(msg)
+
     def _on_command(self, msg) -> None:
         try:
             command = parse_command(msg.data)
@@ -218,11 +314,30 @@ class IsaacScenarioBridge:
                     raise IsaacScenarioBridgeError(
                         "activate command does not match the pending Isaac READY scenario"
                     )
-                active = dict(pending)
-                active["state"] = "active"
+                activation_sim_time_s = self._node.get_clock().now().nanoseconds * 1.0e-9
                 msg = self._String()
-                msg.data = json.dumps(active, sort_keys=True)
+                msg.data = active_scenario_payload(pending, activation_sim_time_s)
                 self._active_pub.publish(msg)
+
+                # Isaac owns physical simulator-side faults. ROS-side
+                # measurement injectors consume the same retained active-scenario
+                # event and schedule odometry/LiDAR channel faults against this
+                # exact activation timestamp.
+                isaac_faults = tuple(
+                    fault
+                    for fault in self._pending_faults
+                    if fault.fault_type.value
+                    in {"kidnapped_robot", "map_mismatch", "dynamic_obstruction"}
+                )
+                scheduled = self._fault_scheduler.configure(
+                    scenario_id=command.scenario_id,
+                    faults=isaac_faults,
+                    activation_sim_time_s=activation_sim_time_s,
+                )
+                self._fault_work = None
+                for fault in scheduled:
+                    self._publish_fault_status(fault, detail="fault scheduled")
+
                 self._publish_status(
                     status_payload(command, state="active", detail="scenario activation committed")
                 )
@@ -230,6 +345,14 @@ class IsaacScenarioBridge:
 
             if self._apply_work is not None:
                 raise IsaacScenarioBridgeError("another Isaac scenario apply is still in progress")
+
+            # Applying a new canonical/runtime scenario immediately disables any
+            # prior fault schedule so fault state cannot leak across experiments.
+            self._fault_scheduler.clear()
+            self._fault_work = None
+            self._pending_faults = ()
+            self._active_dynamic_faults.clear()
+            self._environment_backend.clear_all()
 
             self._publish_status(status_payload(command, state="applying", detail="Isaac apply started"))
             scenario = self._runtime.load_catalog()[command.scenario_id]
@@ -304,14 +427,18 @@ class IsaacScenarioBridge:
             observed = (observed_pose.x, observed_pose.y, observed_pose.yaw)
             scenario = work["scenario"]
             world_id = work["world_id"]
+            faults = self._runtime.scenario_faults(scenario)
             self._pending = {
                 "request_id": command.request_id,
                 "scenario_id": scenario["id"],
                 "world_scenario": world_id,
                 "seed": scenario["seed"],
                 "localization_mode": scenario["localization"]["mode"],
+                "fault_count": len(faults),
+                "fault_ids": [fault.fault_id for fault in faults],
                 "isaac_observed_pose": {"x": observed[0], "y": observed[1], "yaw": observed[2]},
             }
+            self._pending_faults = faults
             self._apply_work = None
             self._publish_status(
                 status_payload(
@@ -327,11 +454,192 @@ class IsaacScenarioBridge:
         except Exception as exc:
             self._fail_apply(command, exc)
 
+    def _begin_kidnapped_robot_fault(self, scheduled_fault, sim_time_s: float) -> None:
+        current = self._robot_backend.read_pose()
+        target_values = kidnapped_target_pose(
+            (current.x, current.y, current.yaw),
+            scheduled_fault.specification.parameters,
+        )
+        target = self._reset.Pose2d(*target_values)
+        self._reset.execute_reset(
+            self._robot_backend,
+            scenario_id=self._fault_scheduler.scenario_id or "unknown",
+            pose=target,
+        )
+        self._fault_work = {
+            "scheduled_fault": scheduled_fault,
+            "target": target,
+            "updates_remaining": FAULT_STABLE_UPDATES,
+        }
+        self._publish_fault_status(
+            scheduled_fault,
+            detail=(
+                f"kidnapped robot teleported at sim_time={sim_time_s:.9f}; "
+                f"waiting {FAULT_STABLE_UPDATES} updates for stable verification"
+            ),
+        )
+
+
+    def _begin_map_mismatch_fault(self, scheduled_fault, sim_time_s: float) -> None:
+        current = self._robot_backend.read_pose()
+        parameters = scheduled_fault.specification.parameters
+        boxes = self._environment_geometry.map_mismatch_geometry(
+            str(parameters["severity"]),
+            str(parameters["variant"]),
+            (current.x, current.y, current.yaw),
+        )
+        self._environment_backend.apply_boxes(
+            scheduled_fault.specification.fault_id, boxes
+        )
+        self._publish_fault_status(
+            scheduled_fault,
+            detail=(
+                f"persistent map mismatch geometry applied at sim_time={sim_time_s:.9f}; "
+                "Nav2 map intentionally unchanged"
+            ),
+        )
+
+    def _begin_dynamic_obstruction_fault(self, scheduled_fault, sim_time_s: float) -> None:
+        current = self._robot_backend.read_pose()
+        parameters = scheduled_fault.specification.parameters
+        boxes = self._environment_geometry.dynamic_obstruction_geometry(
+            str(parameters["profile"]),
+            (current.x, current.y, current.yaw),
+        )
+        fault_id = scheduled_fault.specification.fault_id
+        self._environment_backend.apply_boxes(fault_id, boxes)
+        end_time_s = scheduled_fault.specification.end_time_s
+        if end_time_s is None:
+            raise IsaacScenarioBridgeError(
+                "dynamic obstruction requires a finite end time"
+            )
+        activation_anchor = self._fault_scheduler.scenario_activation_sim_time_s
+        if activation_anchor is None:
+            raise IsaacScenarioBridgeError("fault scheduler has no activation anchor")
+        absolute_end_time_s = activation_anchor + float(end_time_s)
+        self._active_dynamic_faults[fault_id] = {
+            "scheduled_fault": scheduled_fault,
+            "end_sim_time_s": absolute_end_time_s,
+        }
+        self._publish_fault_status(
+            scheduled_fault,
+            detail=(
+                f"dynamic obstruction geometry applied at sim_time={sim_time_s:.9f}; "
+                f"scheduled removal at sim_time={absolute_end_time_s:.9f}"
+            ),
+        )
+
+    def _complete_due_dynamic_faults(self, sim_time_s: float) -> None:
+        for fault_id, work in tuple(self._active_dynamic_faults.items()):
+            if sim_time_s + 1.0e-12 < work["end_sim_time_s"]:
+                continue
+            self._environment_backend.remove_fault(fault_id)
+            completed = self._fault_scheduler.mark_completed(
+                fault_id, sim_time_s=sim_time_s
+            )
+            del self._active_dynamic_faults[fault_id]
+            self._publish_fault_status(
+                completed, detail="dynamic obstruction removed after scheduled duration"
+            )
+
+    def _advance_faults(self, sim_time_s: float) -> None:
+        self._complete_due_dynamic_faults(sim_time_s)
+        work = self._fault_work
+        if work is not None:
+            scheduled_fault = work["scheduled_fault"]
+            try:
+                if work["updates_remaining"] > 0:
+                    work["updates_remaining"] -= 1
+                    return
+                observed = self._robot_backend.read_pose()
+                self._robot_backend.clear_motion()
+                self._reset.validate_pose_match(work["target"], observed)
+                completed = self._fault_scheduler.mark_completed(
+                    scheduled_fault.specification.fault_id,
+                    sim_time_s=sim_time_s,
+                )
+                self._fault_work = None
+                self._publish_fault_status(
+                    completed, detail="kidnapped robot stable pose verified"
+                )
+            except Exception as exc:
+                self._fault_work = None
+                failed = self._fault_scheduler.mark_error(
+                    scheduled_fault.specification.fault_id,
+                    sim_time_s=sim_time_s,
+                    detail=str(exc),
+                )
+                self._publish_fault_status(failed, detail="fault execution failed")
+            return
+
+        try:
+            due = self._fault_scheduler.activate_due(sim_time_s)
+        except self._fault_scheduler_module.FaultSchedulerError:
+            # A backwards/reset simulation clock invalidates relative scheduling.
+            # A fresh scenario activation is required to establish a new anchor.
+            self._fault_work = None
+            self._active_dynamic_faults.clear()
+            self._environment_backend.clear_all()
+            self._fault_scheduler.clear()
+            return
+
+        for scheduled_fault in due:
+            fault_type = scheduled_fault.specification.fault_type.value
+            if fault_type == "map_mismatch":
+                try:
+                    self._begin_map_mismatch_fault(scheduled_fault, sim_time_s)
+                except Exception as exc:
+                    failed = self._fault_scheduler.mark_error(
+                        scheduled_fault.specification.fault_id,
+                        sim_time_s=sim_time_s,
+                        detail=str(exc),
+                    )
+                    self._publish_fault_status(failed, detail="fault execution failed")
+                continue
+            if fault_type == "dynamic_obstruction":
+                try:
+                    self._begin_dynamic_obstruction_fault(scheduled_fault, sim_time_s)
+                except Exception as exc:
+                    failed = self._fault_scheduler.mark_error(
+                        scheduled_fault.specification.fault_id,
+                        sim_time_s=sim_time_s,
+                        detail=str(exc),
+                    )
+                    self._publish_fault_status(failed, detail="fault execution failed")
+                continue
+            if fault_type != "kidnapped_robot":
+                failed = self._fault_scheduler.mark_error(
+                    scheduled_fault.specification.fault_id,
+                    sim_time_s=sim_time_s,
+                    detail="fault type is owned by a ROS-side measurement injector",
+                )
+                self._publish_fault_status(failed, detail="unsupported Isaac-side fault type")
+                continue
+            if self._fault_work is not None:
+                failed = self._fault_scheduler.mark_error(
+                    scheduled_fault.specification.fault_id,
+                    sim_time_s=sim_time_s,
+                    detail="another physical fault is already being stabilized",
+                )
+                self._publish_fault_status(failed, detail="fault execution conflict")
+                continue
+            try:
+                self._begin_kidnapped_robot_fault(scheduled_fault, sim_time_s)
+            except Exception as exc:
+                failed = self._fault_scheduler.mark_error(
+                    scheduled_fault.specification.fault_id,
+                    sim_time_s=sim_time_s,
+                    detail=str(exc),
+                )
+                self._publish_fault_status(failed, detail="fault execution failed")
+
     def _on_update(self, _event) -> None:
         self._rclpy.spin_once(self._node, timeout_sec=0.0)
         self._advance_apply()
         now = self._node.get_clock().now()
         time_seconds = now.nanoseconds * 1.0e-9
+        if self._fault_scheduler.scenario_id is not None:
+            self._advance_faults(time_seconds)
         if self._last_ground_truth_time >= 0.0 and time_seconds - self._last_ground_truth_time < self._period:
             return
         self._last_ground_truth_time = time_seconds

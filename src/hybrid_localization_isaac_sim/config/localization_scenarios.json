@@ -441,6 +441,587 @@
         "xy_stddev": 0.25,
         "yaw_stddev": 0.1
       }
+    },
+    {
+      "id": "S3_KIDNAPPED",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "kidnap_1",
+          "type": "kidnapped_robot",
+          "start_time_s": 10.0,
+          "seed": 1777,
+          "parameters": {
+            "x_offset_m": 2.0,
+            "y_offset_m": 1.0,
+            "yaw_offset_rad": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4_ODOMETRY_DRIFT",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "odom_drift_1",
+          "type": "odometry_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4401,
+          "parameters": {
+            "linear_scale": 1.08,
+            "angular_scale": 1.05
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4_ODOMETRY_BIAS",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "odom_bias_1",
+          "type": "odometry_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4402,
+          "parameters": {
+            "linear_bias_m": 0.15,
+            "angular_bias_rad": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4_ODOMETRY_NOISE",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "odom_noise_1",
+          "type": "odometry_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4403,
+          "parameters": {
+            "linear_noise_stddev_m": 0.02,
+            "angular_noise_stddev_rad": 0.01
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4_ODOMETRY_FREEZE",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "odom_freeze_1",
+          "type": "odometry_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 5.0,
+          "seed": 4404,
+          "parameters": {
+            "freeze": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5_LIDAR_NOISE",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "lidar_noise_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4501,
+          "parameters": {
+            "gaussian_noise_stddev_m": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5_LIDAR_DROPOUT",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "lidar_dropout_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4502,
+          "parameters": {
+            "dropout_fraction": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5_LIDAR_OCCLUSION",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "lidar_occlusion_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4503,
+          "parameters": {
+            "sector_start_rad": -0.6,
+            "sector_end_rad": 0.6
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5_LIDAR_REDUCED_RANGE",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "lidar_range_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4504,
+          "parameters": {
+            "max_range_m": 3.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5_LIDAR_OUTLIERS",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "lidar_outlier_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4505,
+          "parameters": {
+            "outlier_fraction": 0.1,
+            "outlier_min_m": 0.25,
+            "outlier_max_m": 6.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5_LIDAR_SCAN_LOSS",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "lidar_loss_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 3.0,
+          "seed": 4506,
+          "parameters": {
+            "complete_scan_loss": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "S6_PARTIAL_MAP_MISMATCH",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "map_partial_1",
+          "type": "map_mismatch",
+          "start_time_s": 0.0,
+          "seed": 4601,
+          "parameters": {
+            "severity": "partial",
+            "variant": "added_box"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S7_SEVERE_MAP_MISMATCH",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "map_severe_1",
+          "type": "map_mismatch",
+          "start_time_s": 0.0,
+          "seed": 4701,
+          "parameters": {
+            "severity": "severe",
+            "variant": "added_wall"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S8_DYNAMIC_OBSTRUCTION",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "dynamic_front_1",
+          "type": "dynamic_obstruction",
+          "start_time_s": 10.0,
+          "duration_s": 10.0,
+          "seed": 4801,
+          "parameters": {
+            "profile": "front_box"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S0_BASELINE",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      }
+    },
+    {
+      "id": "S1_GLOBAL_INITIALIZATION",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "global"
+      }
+    },
+    {
+      "id": "S2_MULTIMODAL_SYMMETRIC",
+      "world_scenario": "S07",
+      "seed": 1680,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "global"
+      }
+    },
+    {
+      "id": "S9_COMBINED",
+      "world_scenario": "S08",
+      "seed": 1777,
+      "robot": {
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        }
+      },
+      "localization": {
+        "mode": "known_pose",
+        "initial_pose": {
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0
+        },
+        "xy_stddev": 0.25,
+        "yaw_stddev": 0.1
+      },
+      "faults": [
+        {
+          "id": "combined_odom_1",
+          "type": "odometry_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4901,
+          "parameters": {
+            "linear_scale": 1.04,
+            "angular_scale": 1.02
+          }
+        },
+        {
+          "id": "combined_lidar_1",
+          "type": "lidar_degradation",
+          "start_time_s": 10.0,
+          "duration_s": 20.0,
+          "seed": 4902,
+          "parameters": {
+            "dropout_fraction": 0.15,
+            "gaussian_noise_stddev_m": 0.02
+          }
+        }
+      ]
     }
   ]
 }

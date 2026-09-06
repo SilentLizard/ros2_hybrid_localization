@@ -32,3 +32,5 @@ src/hybrid_localization_isaac_sim/generated/
 src/hybrid_localization_isaac_sim/maps/warehouse_demo.png
 src/hybrid_localization_isaac_sim/maps/warehouse_demo.yaml
 benchmark_runs/
+bags/*
+!bags/.gitkeep

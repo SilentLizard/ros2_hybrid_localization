@@ -85,3 +85,82 @@ def test_dynamic_loader_registers_dataclass_module(tmp_path):
     )
     loaded = MODULE._load_module("stage3_test_dataclass_helper", helper)
     assert loaded.Value(7).number == 7
+
+
+def test_kidnapped_target_pose_applies_map_frame_offset_and_wraps_yaw():
+    target = MODULE.kidnapped_target_pose(
+        (1.0, -2.0, math.pi - 0.1),
+        {
+            "x_offset_m": 2.0,
+            "y_offset_m": 1.0,
+            "yaw_offset_rad": 0.2,
+        },
+    )
+
+    assert target[0] == pytest.approx(3.0)
+    assert target[1] == pytest.approx(-1.0)
+    assert target[2] == pytest.approx(-math.pi + 0.1)
+
+
+def test_fault_status_payload_contains_reproducibility_and_sim_time_fields():
+    fault_spec = type(
+        "FaultSpecification",
+        (),
+        {
+            "fault_id": "kidnap_1",
+            "fault_type": type("FaultType", (), {"value": "kidnapped_robot"})(),
+            "start_time_s": 10.0,
+            "seed": 1777,
+            "parameters": {
+                "x_offset_m": 2.0,
+                "y_offset_m": 1.0,
+                "yaw_offset_rad": 0.0,
+            },
+        },
+    )()
+    scheduled = type(
+        "ScheduledFault",
+        (),
+        {
+            "specification": fault_spec,
+            "state": type("FaultState", (), {"value": "completed"})(),
+            "activation_sim_time_s": 52.0,
+            "completion_sim_time_s": 52.15,
+            "error_detail": None,
+        },
+    )()
+
+    value = json.loads(
+        MODULE.fault_status_payload(
+            scenario_id="S3_KIDNAPPED",
+            scheduled_fault=scheduled,
+            scenario_activation_sim_time_s=42.0,
+            detail="stable",
+        )
+    )
+
+    assert value["scenario_id"] == "S3_KIDNAPPED"
+    assert value["fault_id"] == "kidnap_1"
+    assert value["fault_type"] == "kidnapped_robot"
+    assert value["state"] == "completed"
+    assert value["scheduled_elapsed_time_s"] == pytest.approx(10.0)
+    assert value["scheduled_sim_time_s"] == pytest.approx(52.0)
+    assert value["activation_sim_time_s"] == pytest.approx(52.0)
+    assert value["completion_sim_time_s"] == pytest.approx(52.15)
+    assert value["seed"] == 1777
+    assert value["detail"] == "stable"
+
+
+def test_runtime_active_payload_includes_simulation_activation_time():
+    value = json.loads(
+        MODULE.active_scenario_payload(
+            {"scenario_id": "S4_ODOMETRY_DRIFT", "seed": 1777},
+            42.125,
+        )
+    )
+    assert value["scenario_id"] == "S4_ODOMETRY_DRIFT"
+    assert value["state"] == "active"
+    assert value["activation_sim_time_s"] == pytest.approx(42.125)
+
+    with pytest.raises(MODULE.IsaacScenarioBridgeError):
+        MODULE.active_scenario_payload({"scenario_id": "S04"}, -1.0)

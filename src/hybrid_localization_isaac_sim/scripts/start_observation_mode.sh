@@ -153,7 +153,9 @@ stop_existing_observation_stack() {
     /map_server \
     /amcl \
     /particle_analysis_observer \
-    /particle_analysis_visualization
+    /particle_analysis_visualization \
+    /hybrid_localization_odometry_fault_injector \
+    /hybrid_localization_lidar_fault_injector
   do
     if node_exists "$node"; then
       found=1
@@ -172,6 +174,8 @@ stop_existing_observation_stack() {
   pkill -TERM -f 'nav2_amcl/amcl' || true
   pkill -TERM -f 'particle_analysis_observer' || true
   pkill -TERM -f 'particle_analysis_visualization' || true
+  pkill -TERM -f 'odometry_fault_injector.py' || true
+  pkill -TERM -f 'lidar_fault_injector.py' || true
 
   deadline=$((SECONDS + 3))
 
@@ -206,6 +210,8 @@ stop_existing_observation_stack() {
   pkill -KILL -f 'nav2_amcl/amcl' || true
   pkill -KILL -f 'particle_analysis_observer' || true
   pkill -KILL -f 'particle_analysis_visualization' || true
+  pkill -KILL -f 'odometry_fault_injector.py' || true
+  pkill -KILL -f 'lidar_fault_injector.py' || true
 
   sleep 0.5
 
@@ -213,7 +219,9 @@ stop_existing_observation_stack() {
     /map_server \
     /amcl \
     /particle_analysis_observer \
-    /particle_analysis_visualization
+    /particle_analysis_visualization \
+    /hybrid_localization_odometry_fault_injector \
+    /hybrid_localization_lidar_fault_injector
   do
     if node_exists "$node"; then
       echo \
@@ -306,9 +314,8 @@ echo "Checking HEROS Isaac ROS fixture..."
 
 for topic in \
   /clock \
-  /scan \
-  /odom \
-  /tf \
+  /hybrid_localization/raw_scan \
+  /hybrid_localization/raw_odom \
   /tf_static
 do
   if ! wait_for_topic "$topic" 75; then
@@ -320,6 +327,27 @@ do
 done
 
 stop_existing_observation_stack || exit 4
+
+echo "Starting deterministic odometry gateway..."
+
+ros2 run hybrid_localization_isaac_sim \
+  odometry_fault_injector.py \
+  --ros-args \
+  -p use_sim_time:=true &
+
+PIDS+=("$!")
+
+wait_for_topic /odom 75 || exit 4
+wait_for_topic /tf 75 || exit 4
+
+echo "Starting deterministic LiDAR gateway..."
+ros2 run hybrid_localization_isaac_sim \
+  lidar_fault_injector.py \
+  --ros-args \
+  -p use_sim_time:=true &
+PIDS+=("$!")
+
+wait_for_topic /scan 75 || exit 4
 
 echo "Starting HEROS map_server: $MAP_YAML"
 
@@ -439,6 +467,8 @@ echo "  map:        $MAP_YAML"
 echo "  AMCL:       $AMCL_PARAM_FILE"
 echo "  analysis:   $PARTICLE_ANALYSIS_PARAM_FILE"
 echo "  init mode:  $AMCL_INIT_MODE"
+echo "  odometry:   /hybrid_localization/raw_odom -> fault gateway -> /odom + TF"
+echo "  lidar:      /hybrid_localization/raw_scan -> fault gateway -> /scan"
 echo
 echo "Useful checks:"
 echo "  ros2 lifecycle get /map_server"

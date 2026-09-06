@@ -245,10 +245,6 @@ def create_odom_tf(
                 ("Odom", "isaacsim.core.nodes.IsaacComputeOdometry"),
                 ("PubOdom", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
                 (
-                    "PubOdomTF",
-                    "isaacsim.ros2.bridge.ROS2PublishRawTransformTree",
-                ),
-                (
                     "StaticMountTree",
                     "isaacsim.core.nodes.IsaacComputeTransformTree",
                 ),
@@ -265,13 +261,9 @@ def create_odom_tf(
                 # Odometry must be computed from the actual chassis rigid body,
                 # not from the top-level /World/heros_3w Xform.
                 ("Odom.inputs:chassisPrim", [Sdf.Path(base_link)]),
-                ("PubOdom.inputs:topicName", "odom"),
+                ("PubOdom.inputs:topicName", "hybrid_localization/raw_odom"),
                 ("PubOdom.inputs:odomFrameId", "odom"),
                 ("PubOdom.inputs:chassisFrameId", "base_link"),
-                ("PubOdomTF.inputs:topicName", "tf"),
-                ("PubOdomTF.inputs:parentFrameId", "odom"),
-                ("PubOdomTF.inputs:childFrameId", "base_link"),
-                ("PubOdomTF.inputs:staticPublisher", False),
 
                 # base_scan is a fixed mount. Publish its actual USD transform
                 # once on /tf_static.
@@ -314,24 +306,6 @@ def create_odom_tf(
                 (
                     "ROS2Context.outputs:context",
                     "PubOdom.inputs:context",
-                ),
-
-                ("Tick.outputs:tick", "PubOdomTF.inputs:execIn"),
-                (
-                    "Odom.outputs:position",
-                    "PubOdomTF.inputs:translation",
-                ),
-                (
-                    "Odom.outputs:orientation",
-                    "PubOdomTF.inputs:rotation",
-                ),
-                (
-                    "Time.outputs:simulationTime",
-                    "PubOdomTF.inputs:timeStamp",
-                ),
-                (
-                    "ROS2Context.outputs:context",
-                    "PubOdomTF.inputs:context",
                 ),
 
                 ("Tick.outputs:tick", "StaticMountTree.inputs:execIn"),
@@ -393,7 +367,7 @@ def create_lidar(current_stage, lidar):
             ],
             keys.SET_VALUES: [
                 ("Render.inputs:cameraPrim", [Sdf.Path(lidar)]),
-                ("Scan.inputs:topicName", "scan"),
+                ("Scan.inputs:topicName", "hybrid_localization/raw_scan"),
                 ("Scan.inputs:frameId", SCAN_FRAME_ID),
                 ("Scan.inputs:type", "laser_scan"),
                 ("Scan.inputs:enabled", True),
@@ -453,8 +427,9 @@ def main():
     create_lidar(current_stage, lidar)
 
     print("HEROS ROS graphs created.")
-    print("Topics: /cmd_vel /clock /odom /tf /tf_static /scan")
-    print("Expected TF chain: odom -> base_link -> base_scan -> lidar_frame")
+    print("Topics: /cmd_vel /clock /hybrid_localization/raw_odom /hybrid_localization/raw_scan /tf_static")
+    print("Host odometry gateway publishes: /odom and odom -> base_link")
+    print("Expected final TF chain: odom -> base_link -> base_scan -> lidar_frame")
     print("Verify:")
     print("  ros2 run tf2_ros tf2_echo odom base_link")
     print("  ros2 run tf2_ros tf2_echo base_link base_scan")

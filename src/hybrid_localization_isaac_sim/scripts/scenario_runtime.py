@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import argparse
 import copy
+import importlib.util
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +32,28 @@ DEFAULT_RUNTIME_CATALOG = ROOT / "config" / "localization_scenarios.json"
 DEFAULT_WORLD_CATALOG = ROOT / "config" / "world_scenarios.json"
 
 _ALLOWED_INITIALIZATION_MODES = {"known_pose", "global", "random_prior"}
+
+
+def _load_fault_module():
+    path = Path(__file__).resolve().parent / "fault_specification.py"
+    name = "hybrid_localization_fault_specification"
+    existing = sys.modules.get(name)
+    if existing is not None:
+        return existing
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load fault specification helper: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(name, None)
+        raise
+    return module
+
+
+_FAULTS = _load_fault_module()
 
 
 class ScenarioRuntimeError(ValueError):
@@ -123,6 +147,19 @@ def validate_scenario(scenario: Any, world_ids: set[str] | None = None) -> None:
     else:
         if set(localization) != {"mode"}:
             raise ScenarioRuntimeError("global localization must contain only mode")
+
+    if "faults" in scenario:
+        try:
+            _FAULTS.parse_faults(scenario["faults"])
+        except _FAULTS.FaultSpecificationError as exc:
+            raise ScenarioRuntimeError(f"invalid scenario fault configuration: {exc}") from exc
+
+
+def scenario_faults(scenario: dict[str, Any]):
+    """Return the validated deterministic fault schedule for a runtime scenario."""
+
+    validate_scenario(scenario)
+    return _FAULTS.parse_faults(scenario.get("faults", []))
 
 
 def _load_world_ids(path: Path) -> set[str]:

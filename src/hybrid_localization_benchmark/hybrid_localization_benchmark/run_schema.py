@@ -15,8 +15,30 @@ from typing import Final
 
 
 BENCHMARK_SCHEMA_VERSION: Final[int] = 1
+
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
-_SCENARIO_ID_RE = re.compile(r"^S[0-9]{2}$")
+
+# Canonical generated Isaac world identifiers remain strictly SNN because they
+# refer directly to the committed/generated world catalog, for example S07 or
+# S08.
+_WORLD_SCENARIO_ID_RE = re.compile(r"^S[0-9]{2}$")
+
+# Runtime experiment identifiers may either be one of the original canonical
+# SNN scenarios or a named experiment layered on top of a canonical world.
+#
+# Examples:
+#   S08
+#   S0_BASELINE
+#   S1_GLOBAL_INITIALIZATION
+#   S3_KIDNAPPED
+#   S9_COMBINED
+#
+# Keep the contract intentionally narrow and portable: runtime scenarios must
+# begin with S followed by at least one digit and may then contain uppercase
+# letters, digits, and underscores.
+_RUNTIME_SCENARIO_ID_RE = re.compile(
+    r"^S[0-9]+(?:_[A-Z0-9]+)*$"
+)
 
 
 @dataclass(frozen=True)
@@ -106,30 +128,58 @@ class BenchmarkRun:
                 f"unsupported benchmark schema_version {self.schema_version}; "
                 f"expected {BENCHMARK_SCHEMA_VERSION}"
             )
+
         if not _RUN_ID_RE.fullmatch(self.run_id):
-            raise ValueError("run_id must be a portable non-empty identifier")
-        if not _SCENARIO_ID_RE.fullmatch(self.scenario_id):
-            raise ValueError("scenario_id must use the canonical SNN form")
-        if not _SCENARIO_ID_RE.fullmatch(self.world_scenario):
-            raise ValueError("world_scenario must use the canonical SNN form")
+            raise ValueError(
+                "run_id must be a portable non-empty identifier"
+            )
+
+        if not _RUNTIME_SCENARIO_ID_RE.fullmatch(self.scenario_id):
+            raise ValueError(
+                "scenario_id must use a runtime scenario identifier such as "
+                "S08, S0_BASELINE, or S9_COMBINED"
+            )
+
+        if not _WORLD_SCENARIO_ID_RE.fullmatch(self.world_scenario):
+            raise ValueError(
+                "world_scenario must use the canonical SNN form"
+            )
+
         if self.seed < 0:
             raise ValueError("seed must be non-negative")
+
         if not self.estimator.strip():
             raise ValueError("estimator must not be empty")
+
         if not self.ros_distro.strip():
             raise ValueError("ros_distro must not be empty")
+
         if self.git_commit is not None and not self.git_commit.strip():
-            raise ValueError("git_commit must be null or a non-empty string")
+            raise ValueError(
+                "git_commit must be null or a non-empty string"
+            )
 
         try:
-            parsed = datetime.fromisoformat(self.started_at_utc.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(
+                self.started_at_utc.replace("Z", "+00:00")
+            )
         except ValueError as exc:
-            raise ValueError("started_at_utc must be valid ISO-8601") from exc
-        if parsed.tzinfo is None or parsed.utcoffset() != timezone.utc.utcoffset(parsed):
-            raise ValueError("started_at_utc must explicitly use UTC")
+            raise ValueError(
+                "started_at_utc must be valid ISO-8601"
+            ) from exc
+
+        if (
+            parsed.tzinfo is None
+            or parsed.utcoffset()
+            != timezone.utc.utcoffset(parsed)
+        ):
+            raise ValueError(
+                "started_at_utc must explicitly use UTC"
+            )
 
     def to_manifest(self) -> dict[str, object]:
         self.validate()
+
         return {
             "schema_version": self.schema_version,
             "run": {
@@ -148,26 +198,48 @@ class BenchmarkRun:
                 "resource_clock": "host monotonic time",
                 "resource_timestamp_unit": "nanoseconds",
             },
-            "streams": [stream.to_dict() for stream in OUTPUT_STREAMS],
+            "streams": [
+                stream.to_dict()
+                for stream in OUTPUT_STREAMS
+            ],
             "summary": {
                 "filename": SUMMARY_FILENAME,
                 "stage": 5,
-                "purpose": "Aggregate run metrics and deterministic acceptance result.",
+                "purpose": (
+                    "Aggregate run metrics and deterministic acceptance "
+                    "result."
+                ),
             },
         }
 
 
-def create_run_directory(root: Path, run: BenchmarkRun) -> Path:
+def create_run_directory(
+    root: Path,
+    run: BenchmarkRun,
+) -> Path:
     """Create a new run directory and write only its immutable manifest.
 
     CSV files are created by their owning recorder stages. Refusing to reuse an
-    existing directory prevents accidental mixing of samples from separate runs.
+    existing directory prevents accidental mixing of samples from separate
+    runs.
     """
 
     manifest = run.to_manifest()
+
     run_directory = root / run.run_id
-    run_directory.mkdir(parents=True, exist_ok=False)
-    (run_directory / MANIFEST_FILENAME).write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    run_directory.mkdir(
+        parents=True,
+        exist_ok=False,
     )
+
+    (run_directory / MANIFEST_FILENAME).write_text(
+        json.dumps(
+            manifest,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
     return run_directory

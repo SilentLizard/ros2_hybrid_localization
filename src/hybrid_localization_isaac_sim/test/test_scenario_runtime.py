@@ -37,11 +37,33 @@ def _base_scenario():
     }
 
 
-def test_committed_runtime_catalog_matches_all_world_scenario_ids():
+def test_committed_runtime_catalog_preserves_one_fault_free_baseline_per_world():
     catalog = runtime.load_catalog()
     world_ids = runtime._load_world_ids(runtime.DEFAULT_WORLD_CATALOG)
-    assert len(catalog) == 20
-    assert set(catalog) == world_ids
+
+    assert world_ids.issubset(catalog)
+    for world_id in world_ids:
+        baseline = catalog[world_id]
+        assert baseline["world_scenario"] == world_id
+        assert runtime.scenario_faults(baseline) == ()
+
+
+def test_committed_stage2_kidnapped_scenario_is_deterministic_and_separate_from_baseline():
+    catalog = runtime.load_catalog()
+    scenario = catalog["S3_KIDNAPPED"]
+
+    assert scenario["world_scenario"] == "S08"
+    assert catalog["S08"].get("faults") is None
+    scheduled = runtime.scenario_faults(scenario)
+    assert len(scheduled) == 1
+    assert scheduled[0].fault_id == "kidnap_1"
+    assert scheduled[0].fault_type.value == "kidnapped_robot"
+    assert scheduled[0].start_time_s == pytest.approx(10.0)
+    assert dict(scheduled[0].parameters) == {
+        "x_offset_m": 2.0,
+        "y_offset_m": 1.0,
+        "yaw_offset_rad": 0.0,
+    }
 
 
 def test_physical_pose_and_known_pose_prior_are_independent():
@@ -116,3 +138,126 @@ def test_localization_follows_robot_rejects_non_known_pose_mode():
             yaw=0.0,
             localization_follows_robot=True,
         )
+
+
+def test_committed_stage3_odometry_scenarios_cover_drift_bias_noise_and_freeze():
+    catalog = runtime.load_catalog()
+    expected = {
+        "S4_ODOMETRY_DRIFT": {"linear_scale": 1.08, "angular_scale": 1.05},
+        "S4_ODOMETRY_BIAS": {"linear_bias_m": 0.15, "angular_bias_rad": 0.05},
+        "S4_ODOMETRY_NOISE": {
+            "linear_noise_stddev_m": 0.02,
+            "angular_noise_stddev_rad": 0.01,
+        },
+        "S4_ODOMETRY_FREEZE": {"freeze": True},
+    }
+
+    for scenario_id, parameters in expected.items():
+        scenario = catalog[scenario_id]
+        assert scenario["world_scenario"] == "S08"
+        scheduled = runtime.scenario_faults(scenario)
+        assert len(scheduled) == 1
+        assert scheduled[0].fault_type.value == "odometry_degradation"
+        assert scheduled[0].start_time_s == pytest.approx(10.0)
+        assert dict(scheduled[0].parameters) == parameters
+
+    assert runtime.scenario_faults(catalog["S08"]) == ()
+
+
+def test_committed_stage4_lidar_scenarios_cover_supported_corruptions():
+    catalog = runtime.load_catalog()
+    expected = {
+        "S5_LIDAR_NOISE": {"gaussian_noise_stddev_m": 0.05},
+        "S5_LIDAR_DROPOUT": {"dropout_fraction": 0.30},
+        "S5_LIDAR_OCCLUSION": {
+            "sector_start_rad": -0.60,
+            "sector_end_rad": 0.60,
+        },
+        "S5_LIDAR_REDUCED_RANGE": {"max_range_m": 3.0},
+        "S5_LIDAR_OUTLIERS": {
+            "outlier_fraction": 0.10,
+            "outlier_min_m": 0.25,
+            "outlier_max_m": 6.0,
+        },
+        "S5_LIDAR_SCAN_LOSS": {"complete_scan_loss": True},
+    }
+
+    for scenario_id, parameters in expected.items():
+        scenario = catalog[scenario_id]
+        assert scenario["world_scenario"] == "S08"
+        scheduled = runtime.scenario_faults(scenario)
+        assert len(scheduled) == 1
+        assert scheduled[0].fault_type.value == "lidar_degradation"
+        assert scheduled[0].start_time_s == pytest.approx(10.0)
+        assert dict(scheduled[0].parameters) == parameters
+
+    assert runtime.scenario_faults(catalog["S08"]) == ()
+
+
+def test_committed_stage5_environment_scenarios_cover_map_mismatch_and_dynamic_obstruction():
+    catalog = runtime.load_catalog()
+    expected = {
+        "S6_PARTIAL_MAP_MISMATCH": (
+            "map_mismatch",
+            0.0,
+            {"severity": "partial", "variant": "added_box"},
+            None,
+        ),
+        "S7_SEVERE_MAP_MISMATCH": (
+            "map_mismatch",
+            0.0,
+            {"severity": "severe", "variant": "added_wall"},
+            None,
+        ),
+        "S8_DYNAMIC_OBSTRUCTION": (
+            "dynamic_obstruction",
+            10.0,
+            {"profile": "front_box"},
+            20.0,
+        ),
+    }
+
+    for scenario_id, (fault_type, start_s, parameters, end_s) in expected.items():
+        scenario = catalog[scenario_id]
+        assert scenario["world_scenario"] == "S08"
+        scheduled = runtime.scenario_faults(scenario)
+        assert len(scheduled) == 1
+        fault = scheduled[0]
+        assert fault.fault_type.value == fault_type
+        assert fault.start_time_s == pytest.approx(start_s)
+        assert dict(fault.parameters) == parameters
+        if end_s is None:
+            assert fault.end_time_s is None
+        else:
+            assert fault.end_time_s == pytest.approx(end_s)
+
+    assert runtime.scenario_faults(catalog["S08"]) == ()
+
+
+def test_committed_stage6_representatives_cover_s0_s1_s2_and_combined_s9():
+    catalog = runtime.load_catalog()
+
+    assert catalog["S0_BASELINE"]["world_scenario"] == "S08"
+    assert catalog["S0_BASELINE"]["localization"]["mode"] == "known_pose"
+    assert runtime.scenario_faults(catalog["S0_BASELINE"]) == ()
+
+    assert catalog["S1_GLOBAL_INITIALIZATION"]["world_scenario"] == "S08"
+    assert catalog["S1_GLOBAL_INITIALIZATION"]["localization"]["mode"] == "global"
+    assert runtime.scenario_faults(catalog["S1_GLOBAL_INITIALIZATION"]) == ()
+
+    assert catalog["S2_MULTIMODAL_SYMMETRIC"]["world_scenario"] == "S07"
+    assert catalog["S2_MULTIMODAL_SYMMETRIC"]["localization"]["mode"] == "global"
+    assert runtime.scenario_faults(catalog["S2_MULTIMODAL_SYMMETRIC"]) == ()
+
+    combined = runtime.scenario_faults(catalog["S9_COMBINED"])
+    assert len(combined) == 2
+    assert {fault.fault_type.value for fault in combined} == {
+        "odometry_degradation",
+        "lidar_degradation",
+    }
+    assert {fault.fault_id for fault in combined} == {
+        "combined_odom_1",
+        "combined_lidar_1",
+    }
+    assert all(fault.start_time_s == pytest.approx(10.0) for fault in combined)
+    assert all(fault.end_time_s == pytest.approx(30.0) for fault in combined)
