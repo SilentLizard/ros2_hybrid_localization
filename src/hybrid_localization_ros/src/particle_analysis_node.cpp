@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstddef>
 #include <exception>
 #include <memory>
@@ -114,7 +115,12 @@ private:
   void handle_cloud(AdaptedParticleCloud cloud)
   {
     try {
+      const auto processing_start = std::chrono::steady_clock::now();
       auto products = processor_->process(cloud);
+      const auto processing_end = std::chrono::steady_clock::now();
+      const auto processing_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        processing_end - processing_start).count();
+      products.analysis.processing_duration_ns = static_cast<std::uint64_t>(processing_duration);
 
       mixture_publisher_->publish(products.mixture);
       health_publisher_->publish(products.health);

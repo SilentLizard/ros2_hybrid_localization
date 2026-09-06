@@ -16,6 +16,10 @@ ISAAC_PACKAGE="hybrid_localization_isaac_sim"
 ISAAC_PACKAGE_DIR="${WORKSPACE_DIR}/src/${ISAAC_PACKAGE}"
 ISAAC_CMAKE="${ISAAC_PACKAGE_DIR}/CMakeLists.txt"
 
+BENCHMARK_PACKAGE="hybrid_localization_benchmark"
+BENCHMARK_PACKAGE_DIR="${WORKSPACE_DIR}/src/${BENCHMARK_PACKAGE}"
+BENCHMARK_CMAKE="${BENCHMARK_PACKAGE_DIR}/CMakeLists.txt"
+
 BUILD_TYPE="RelWithDebInfo"
 CLEAN_BUILD=false
 RUN_BUILD=true
@@ -104,7 +108,10 @@ update_cmake_lists()
 {
   log "Updating generated CMake sections"
 
-  python3 - "${CORE_PACKAGE_DIR}" "${CORE_CMAKE}" "${ISAAC_PACKAGE_DIR}" "${ISAAC_CMAKE}" <<'PY_AUTOCMAKE'
+  python3 - \
+    "${CORE_PACKAGE_DIR}" "${CORE_CMAKE}" \
+    "${ISAAC_PACKAGE_DIR}" "${ISAAC_CMAKE}" \
+    "${BENCHMARK_PACKAGE_DIR}" "${BENCHMARK_CMAKE}" <<'PY_AUTOCMAKE'
 from __future__ import annotations
 
 import re
@@ -115,6 +122,8 @@ core_package_dir = Path(sys.argv[1]).resolve()
 core_cmake_path = Path(sys.argv[2]).resolve()
 isaac_package_dir = Path(sys.argv[3]).resolve()
 isaac_cmake_path = Path(sys.argv[4]).resolve()
+benchmark_package_dir = Path(sys.argv[5]).resolve()
+benchmark_cmake_path = Path(sys.argv[6]).resolve()
 
 
 def replace_marked_section(content: str, start_marker: str, end_marker: str, replacement_body: str) -> str:
@@ -189,8 +198,27 @@ def update_isaac() -> None:
     print("Isaac pytest sources:")
     for p in pytest_files: print(f"  - {rel(p)}")
 
+
+def update_benchmark() -> None:
+    scripts_dir = benchmark_package_dir / "scripts"
+    tests_dir = benchmark_package_dir / "test"
+    scripts = sorted(p for p in scripts_dir.glob("*.py") if p.is_file())
+    pytest_files = sorted(p for p in tests_dir.glob("test_*.py") if p.is_file())
+    rel = lambda p: p.relative_to(benchmark_package_dir).as_posix()
+    script_section = "\n".join(f"    {rel(p)}" for p in scripts) or "    # No benchmark executable scripts were found."
+    pytest_section = "\n".join(f"  ament_add_pytest_test({p.stem} {rel(p)})" for p in pytest_files) or "  # No benchmark test_*.py files were found."
+    original = benchmark_cmake_path.read_text(encoding="utf-8")
+    updated = replace_marked_section(original, "# BEGIN AUTO BENCHMARK TOOLS", "# END AUTO BENCHMARK TOOLS", script_section)
+    updated = replace_marked_section(updated, "# BEGIN AUTO BENCHMARK PYTESTS", "# END AUTO BENCHMARK PYTESTS", pytest_section)
+    write_if_changed(benchmark_cmake_path, original, updated)
+    print("Benchmark tools:")
+    for p in scripts: print(f"  - {rel(p)}")
+    print("Benchmark pytest sources:")
+    for p in pytest_files: print(f"  - {rel(p)}")
+
 update_core()
 update_isaac()
+update_benchmark()
 PY_AUTOCMAKE
 }
 

@@ -3,6 +3,8 @@
 
 std_msgs/Header header
 uint64 analysis_sequence
+# Host steady-clock duration of the particle-analysis processing step.
+uint64 processing_duration_ns
 
 uint64 particle_count
 uint64 retained_cluster_count

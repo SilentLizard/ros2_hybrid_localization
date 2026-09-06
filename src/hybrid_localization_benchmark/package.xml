@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>hybrid_localization_benchmark</name>
+  <version>0.1.0</version>
+  <description>Benchmark run schema, recorder infrastructure, metrics, and regression outputs for hybrid localization experiments.</description>
+  <maintainer email="silent.coding.lizard@gmail.com">silent-lizard</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <exec_depend>python3</exec_depend>
+  <depend>geometry_msgs</depend>
+  <depend>hybrid_localization_msgs</depend>
+  <depend>rclpy</depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
